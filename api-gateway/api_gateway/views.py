@@ -27,6 +27,12 @@ def home(request):
     try:
         res = requests.get("http://book-service:8000/books/")
         books = res.json() if res.status_code == 200 else []
+        
+        # 🔥 THÊM ĐOẠN NÀY: Gắn tiền tố cho toàn bộ sách để Frontend render link chuẩn
+        for b in books:
+            b['type'] = 'book'
+            b['product_id'] = f"book_{b['id']}"
+            
     except Exception:
         books = []
 
@@ -48,6 +54,10 @@ def home(request):
             ai_data = ai_res.json()
             if ai_data.get("book"):
                 ai_book = ai_data["book"]
+                
+                # 🔥 THÊM ĐOẠN NÀY: Đảm bảo cuốn sách AI gợi ý cũng có đúng cấu trúc ID
+                ai_book['type'] = 'book'
+                ai_book['product_id'] = f"book_{ai_book['id']}"
                 ai_reason = ai_data.get("reason", ai_reason)
     except Exception:
         pass
