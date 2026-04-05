@@ -27,6 +27,18 @@
     .nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
     .cart-badge{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:var(--color-gold);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
 
+    /* PROFILE DROPDOWN */
+    .profile-dropdown { position: absolute; top: calc(100% + 15px); right: 0; width: 220px; background: #fff; padding: 8px 0; border-radius: var(--radius-md); box-shadow: var(--shadow-hover); opacity: 0; visibility: hidden; transform: translateY(-10px); transition: var(--transition); cursor: default; z-index: 1001; pointer-events: none; }
+    .nav-icon.profile-active .profile-dropdown { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+    .profile-dropdown::before { content: ''; position: absolute; top: -6px; right: 14px; transform: rotate(45deg); width: 12px; height: 12px; background: #fff; }
+    .profile-dropdown-header { padding: 12px 20px; border-bottom: 1px solid var(--color-silk); margin-bottom: 8px; }
+    .profile-dropdown-header strong { display: block; font-size: 15px; color: var(--color-obsidian); }
+    .profile-dropdown-header span { font-size: 13px; color: var(--color-ash); }
+    .profile-dropdown a { display: flex; align-items: center; gap: 12px; padding: 10px 20px; font-size: 14px; color: var(--color-charcoal); text-decoration: none; transition: background 0.2s; }
+    .profile-dropdown a:hover { background: var(--color-ivory); color: var(--color-gold); }
+    .profile-dropdown a.text-red { color: var(--color-crimson); }
+    .profile-dropdown a.text-red:hover { background: #ffebeb; }
+
     /* STEPS */
     .steps-wrap{padding:96px 0 40px}
     .steps{display:flex;align-items:center;justify-content:center;gap:0}
@@ -180,8 +192,11 @@
     <div class="nav-icons">
       <div class="nav-icon" title="Tìm kiếm" onclick="location.href='/listing/'"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
       <div class="nav-icon" title="Yêu thích"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-      <div class="nav-icon" title="Giỏ hàng" onclick="location.href='/cart/'"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span class="cart-badge">3</span></div>
-      <div class="nav-icon" title="Tài khoản" onclick="location.href='/auth/'"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="nav-icon" title="Giỏ hàng" onclick="location.href='/cart/'"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span class="cart-badge" id="cart-count" style="display: none;">0</span></div>
+      <div class="nav-icon" id="nav-profile" title="Tài khoản">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="profile-dropdown" id="profile-dropdown"></div>
+      </div>
     </div>
   </div></nav>
 
@@ -202,45 +217,30 @@
         <!-- STEP 1: CART -->
         <div class="step-panel active" id="panel-1">
           <div class="cart-items">
-            <div class="cart-item" data-id="C1" data-price="32500000">
-              <img class="cart-item-img" src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=300&q=80" style="object-fit:cover;border-radius:4px" alt="Áo Blazer">
-              <div class="cart-item-info">
-                <p class="cart-item-brand">Gucci</p>
-                <h4 class="cart-item-name">Áo Blazer Wool Classic</h4>
-                <p class="cart-item-variant">Size: M · Màu: Navy</p>
-                <div class="cart-item-bottom">
-                  <span class="cart-item-price">32.500.000 ₫</span>
-                  <div class="qty-spinner"><button class="qty-btn qm">−</button><input class="qty-val" value="1" readonly><button class="qty-btn qp">+</button></div>
+            {% if cart_items %}
+              {% for item in cart_items %}
+              <div class="cart-item" data-id="{{ item.item_id }}" data-product-id="{{ item.book_id }}" data-price="{{ item.price }}">
+                <img class="cart-item-img" src="{{ item.image_url|default:'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=300&q=80' }}" style="object-fit:cover;border-radius:4px" alt="{{ item.title }}">
+                <div class="cart-item-info">
+                  <p class="cart-item-brand">LUMIÈRE</p>
+                  <h4 class="cart-item-name">{{ item.title }}</h4>
+                  <p class="cart-item-variant">Sản phẩm chất lượng</p>
+                  <div class="cart-item-bottom">
+                    <span class="cart-item-price">{{ item.price|floatformat:0 }} ₫</span>
+                    <div class="qty-spinner">
+                      <button class="qty-btn qm">−</button>
+                      <input class="qty-val" value="{{ item.quantity }}" readonly>
+                      <button class="qty-btn qp">+</button>
+                    </div>
+                  </div>
+                  <div class="cart-item-remove" data-id="{{ item.item_id }}">Xóa</div>
                 </div>
-                <div class="cart-item-remove">Xóa</div>
               </div>
-            </div>
-            <div class="cart-item" data-id="C2" data-price="88000">
-              <img class="cart-item-img" src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=300&q=80" style="object-fit:cover;border-radius:4px" alt="Sách">
-              <div class="cart-item-info">
-                <p class="cart-item-brand">Sách</p>
-                <h4 class="cart-item-name">Đắc Nhân Tâm</h4>
-                <p class="cart-item-variant">Bìa mềm · Dale Carnegie</p>
-                <div class="cart-item-bottom">
-                  <span class="cart-item-price">88.000 ₫</span>
-                  <div class="qty-spinner"><button class="qty-btn qm">−</button><input class="qty-val" value="2" readonly><button class="qty-btn qp">+</button></div>
-                </div>
-                <div class="cart-item-remove">Xóa</div>
-              </div>
-            </div>
-            <div class="cart-item" data-id="C3" data-price="59500000">
-              <img class="cart-item-img" src="https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&w=300&q=80" style="object-fit:cover;border-radius:4px" alt="Túi">
-              <div class="cart-item-info">
-                <p class="cart-item-brand">Dior</p>
-                <h4 class="cart-item-name">Book Tote Oblique</h4>
-                <p class="cart-item-variant">Size: Medium · Canvas</p>
-                <div class="cart-item-bottom">
-                  <span class="cart-item-price">59.500.000 ₫</span>
-                  <div class="qty-spinner"><button class="qty-btn qm">−</button><input class="qty-val" value="1" readonly><button class="qty-btn qp">+</button></div>
-                </div>
-                <div class="cart-item-remove">Xóa</div>
-              </div>
-            </div>
+              {% endfor %}
+            {% else %}
+              <p style="padding: 24px; text-align: center; color: var(--color-ash);">Giỏ hàng của bạn đang trống.</p>
+            {% endif %}
+            
             <div class="coupon-row">
               <input type="text" class="coupon-input" placeholder="Nhập mã giảm giá...">
               <button class="coupon-btn">Áp dụng</button>
@@ -252,27 +252,27 @@
         <div class="step-panel" id="panel-2">
           <div class="cart-items">
             <h3 style="margin-bottom:20px">Thông Tin Giao Hàng</h3>
-            <div class="form-grid">
-              <div class="form-group"><label class="form-label">Họ tên</label><input class="form-input" placeholder="Nguyễn Văn A"></div>
-              <div class="form-group"><label class="form-label">Số điện thoại</label><input class="form-input" placeholder="0901 234 567"></div>
-              <div class="form-group full"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="email@example.com"></div>
-              <div class="form-group full"><label class="form-label">Địa chỉ</label><input class="form-input" placeholder="Số nhà, tên đường"></div>
-              <div class="form-group"><label class="form-label">Quận / Huyện</label><input class="form-input" placeholder="Quận 1"></div>
-              <div class="form-group"><label class="form-label">Tỉnh / Thành phố</label><input class="form-input" placeholder="TP. Hồ Chí Minh"></div>
+            <div class="form-grid" id="shipping-form">
+              <div class="form-group"><label class="form-label">Họ tên *</label><input class="form-input" id="ship-name" placeholder="Nguyễn Văn A"></div>
+              <div class="form-group"><label class="form-label">Số điện thoại *</label><input class="form-input" id="ship-phone" placeholder="0901 234 567"></div>
+              <div class="form-group full"><label class="form-label">Email *</label><input class="form-input" id="ship-email" type="email" placeholder="email@example.com"></div>
+              <div class="form-group full"><label class="form-label">Địa chỉ *</label><input class="form-input" id="ship-addr" placeholder="Số nhà, tên đường"></div>
+              <div class="form-group"><label class="form-label">Quận / Huyện *</label><input class="form-input" id="ship-district" placeholder="Quận 1"></div>
+              <div class="form-group"><label class="form-label">Tỉnh / Thành phố *</label><input class="form-input" id="ship-city" placeholder="TP. Hồ Chí Minh"></div>
             </div>
             <div class="delivery-options">
               <h4 style="margin-bottom:12px">Phương thức vận chuyển</h4>
-              <div class="delivery-card selected" data-ship="30000" onclick="selectDelivery(this)">
+              <div class="delivery-card selected" data-ship="30000" data-id="1" onclick="selectDelivery(this)">
                 <div class="delivery-radio"></div>
                 <div class="delivery-info"><div class="delivery-name">Giao tiêu chuẩn</div><div class="delivery-desc">3-5 ngày làm việc</div></div>
                 <div class="delivery-price">30.000 ₫</div>
               </div>
-              <div class="delivery-card" data-ship="60000" onclick="selectDelivery(this)">
+              <div class="delivery-card" data-ship="60000" data-id="2" onclick="selectDelivery(this)">
                 <div class="delivery-radio"></div>
                 <div class="delivery-info"><div class="delivery-name">Giao nhanh</div><div class="delivery-desc">1-2 ngày làm việc</div></div>
                 <div class="delivery-price">60.000 ₫</div>
               </div>
-              <div class="delivery-card" data-ship="120000" onclick="selectDelivery(this)">
+              <div class="delivery-card" data-ship="120000" data-id="3" onclick="selectDelivery(this)">
                 <div class="delivery-radio"></div>
                 <div class="delivery-info"><div class="delivery-name">Hỏa tốc</div><div class="delivery-desc">Trong ngày (nội thành)</div></div>
                 <div class="delivery-price">120.000 ₫</div>
@@ -286,22 +286,24 @@
           <div class="cart-items">
             <h3 style="margin-bottom:20px">Thanh Toán</h3>
             <div class="payment-methods">
-              <div class="pay-card selected" onclick="selectPay(this,'bank')"><div class="pay-radio"></div><div class="pay-icon">🏦</div><div><div class="pay-name">Thẻ ngân hàng</div></div></div>
-              <div class="pay-card" onclick="selectPay(this,'momo')"><div class="pay-radio"></div><div class="pay-icon" style="color:#A50064;font-weight:700">M</div><div><div class="pay-name">Ví MoMo</div></div></div>
-              <div class="pay-card" onclick="selectPay(this,'zalo')"><div class="pay-radio"></div><div class="pay-icon" style="color:#0068FF;font-weight:700">Z</div><div><div class="pay-name">ZaloPay</div></div></div>
-              <div class="pay-card" onclick="selectPay(this,'cod')"><div class="pay-radio"></div><div class="pay-icon">📦</div><div><div class="pay-name">Thanh toán khi nhận hàng (COD)</div></div></div>
+              <div class="pay-card selected" data-id="2" onclick="selectPay(this,'bank')"><div class="pay-radio"></div><div class="pay-icon">🏦</div><div><div class="pay-name">Thẻ ngân hàng / Thẻ tín dụng</div></div></div>
+              <div class="pay-card" data-id="1" onclick="selectPay(this,'cod')"><div class="pay-radio"></div><div class="pay-icon">📦</div><div><div class="pay-name">Thanh toán khi nhận hàng (COD)</div></div></div>
             </div>
             <div class="card-form show" id="card-form">
               <div class="form-grid">
-                <div class="form-group full"><label class="form-label">Số thẻ</label><input class="form-input" placeholder="•••• •••• •••• ••••" maxlength="19"></div>
-                <div class="form-group"><label class="form-label">Tháng/Năm</label><input class="form-input" placeholder="MM/YY" maxlength="5"></div>
-                <div class="form-group"><label class="form-label">CVV</label><input class="form-input" placeholder="•••" maxlength="3" type="password"></div>
+                <div class="form-group full"><label class="form-label">Số thẻ *</label><input class="form-input" id="card-num" placeholder="•••• •••• •••• ••••" maxlength="19"></div>
+                <div class="form-group"><label class="form-label">Tháng/Năm *</label><input class="form-input" id="card-exp" placeholder="MM/YY" maxlength="5"></div>
+                <div class="form-group"><label class="form-label">CVV *</label><input class="form-input" id="card-cvv" placeholder="•••" maxlength="3" type="password"></div>
               </div>
             </div>
             <h4 style="margin-top:24px;margin-bottom:12px">Tóm Tắt Đơn Hàng</h4>
-            <div class="review-item"><img class="review-thumb" src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=150&q=80" style="object-fit:cover" alt="Áo"><div><strong>Áo Blazer Wool Classic</strong><br><span style="font-size:12px;color:var(--color-ash)">Size M · Navy · x1</span></div><div style="margin-left:auto;font-family:var(--font-mono);color:var(--color-gold)">32.500.000 ₫</div></div>
-            <div class="review-item"><img class="review-thumb" src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=150&q=80" style="object-fit:cover" alt="Sách"><div><strong>Đắc Nhân Tâm</strong><br><span style="font-size:12px;color:var(--color-ash)">Bìa mềm · x2</span></div><div style="margin-left:auto;font-family:var(--font-mono);color:var(--color-gold)">176.000 ₫</div></div>
-            <div class="review-item"><img class="review-thumb" src="https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&w=150&q=80" style="object-fit:cover" alt="Túi"><div><strong>Book Tote Oblique</strong><br><span style="font-size:12px;color:var(--color-ash)">Medium · x1</span></div><div style="margin-left:auto;font-family:var(--font-mono);color:var(--color-gold)">59.500.000 ₫</div></div>
+            {% for item in cart_items %}
+            <div class="review-item" data-id="{{ item.item_id }}">
+              <img class="review-thumb" src="{{ item.image_url|default:'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=150&q=80' }}" style="object-fit:cover" alt="{{ item.title }}">
+              <div><strong>{{ item.title }}</strong><br><span style="font-size:12px;color:var(--color-ash)">Sản phẩm chất lượng · x<span class="review-qty-{{ item.item_id }}">{{ item.quantity }}</span></span></div>
+              <div style="margin-left:auto;font-family:var(--font-mono);color:var(--color-gold)" class="review-subtotal-{{ item.item_id }}">{{ item.subtotal|floatformat:0 }} ₫</div>
+            </div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -309,11 +311,11 @@
       <!-- SUMMARY SIDEBAR -->
       <div class="order-summary">
         <h3 class="summary-title">Đơn Hàng</h3>
-        <div class="summary-row"><span>Tạm tính (4 sản phẩm)</span><span id="subtotal" style="font-family:var(--font-mono)">92.176.000 ₫</span></div>
-        <div class="summary-row"><span>Phí vận chuyển</span><span id="ship-cost" style="font-family:var(--font-mono)">30.000 ₫</span></div>
+        <div class="summary-row"><span>Tạm tính (<span id="cart-item-count">{{ cart_items|length }}</span> sản phẩm)</span><span id="subtotal" style="font-family:var(--font-mono)">{{ total_price|floatformat:0 }} ₫</span></div>
+        <div class="summary-row"><span>Phí vận chuyển</span><span id="ship-cost" style="font-family:var(--font-mono)">30000 ₫</span></div>
         <div class="summary-row discount"><span>Giảm giá</span><span id="discount" style="font-family:var(--font-mono)">-0 ₫</span></div>
         <div class="summary-divider"></div>
-        <div class="summary-total"><span>Tổng cộng</span><span class="total-price" id="total">92.206.000 ₫</span></div>
+        <div class="summary-total"><span>Tổng cộng</span><span class="total-price" id="total">{{ total_price|add:30000|floatformat:0 }} ₫</span></div>
         <button class="btn-checkout" id="btn-next">Tiếp tục</button>
         <button class="btn-back" id="btn-prev" style="display:none">← Quay lại</button>
       </div>
@@ -378,24 +380,198 @@
       track('checkout_step',{step:n});
     }
 
-    btnNext.addEventListener('click',()=>{
-      if(currentStep<3)goToStep(currentStep+1);
-      else{document.getElementById('modal').classList.add('show');track('order_placed',{total:'92.206.000 ₫'})}
+    // Utility logic for checkout validation
+    function validateShipping() {
+      const name = document.getElementById('ship-name').value.trim();
+      const phone = document.getElementById('ship-phone').value.trim();
+      const address = document.getElementById('ship-addr').value.trim();
+      const city = document.getElementById('ship-city').value.trim();
+      const district = document.getElementById('ship-district').value.trim();
+      const selectedMethod = document.querySelector('.delivery-options .delivery-card.selected');
+      if (!name || !phone || !address || !city || !district) {
+        alert("Vui lòng điền đầy đủ thông tin giao hàng!");
+        return false;
+      }
+      if (!selectedMethod) {
+        alert("Vui lòng chọn 1 phương thức giao hàng!");
+        return false;
+      }
+      return true;
+    }
+
+    function validatePayment() {
+      const selectedPay = document.querySelector('.payment-methods .pay-card.selected');
+      if (!selectedPay) {
+        alert("Vui lòng chọn phương thức thanh toán!");
+        return false;
+      }
+      if (selectedPay.getAttribute('data-id') === '2') { // Bank card logic
+        const num = document.getElementById('card-num').value.trim();
+        const exp = document.getElementById('card-exp').value.trim();
+        const cvv = document.getElementById('card-cvv').value.trim();
+        if (!num || !exp || !cvv) {
+          alert("Vui lòng điền đủ thông tin thẻ tín dụng!");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    btnNext.addEventListener('click', async () => {
+      // Check if cart is empty before proceeding
+      const activeItems = document.querySelectorAll('.cart-item:not([style*="display: none"])');
+      if (activeItems.length === 0) {
+        alert('Giỏ hàng trống!');
+        return;
+      }
+
+      if (currentStep === 1) {
+        goToStep(2);
+      } else if (currentStep === 2) {
+        if (!validateShipping()) return;
+        goToStep(3);
+      } else {
+        // Step 3: validate and checkout
+        if (!validatePayment()) return;
+        btnNext.innerText = 'Đang xử lý...';
+        btnNext.disabled = true;
+
+        const addressStr = `${document.getElementById('ship-addr').value}, ${document.getElementById('ship-district').value}, ${document.getElementById('ship-city').value}`;
+        const shipMethodId = parseInt(document.querySelector('.delivery-options .delivery-card.selected').getAttribute('data-id'));
+        const payMethodId = parseInt(document.querySelector('.payment-methods .pay-card.selected').getAttribute('data-id'));
+        const sessionCustomerId = "{{ request.session.customer_id }}";
+
+        try {
+          const response = await fetch('/api/order/orders/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              customer_id: sessionCustomerId ? parseInt(sessionCustomerId) : 1, // Fallback dummy customer
+              address: addressStr,
+              shipping_method_id: shipMethodId,
+              payment_method_id: payMethodId
+            })
+          });
+          
+          if (response.ok) {
+            document.getElementById('modal').classList.add('show');
+            track('order_placed', {total: document.getElementById('total').textContent.trim()});
+            // Clear cart items visually
+            document.querySelectorAll('.cart-item').forEach(el => el.style.display = 'none');
+            calculateTotal();
+          } else {
+            const data = await response.json();
+            alert('Có lỗi xảy ra khi đặt hàng: ' + (data.detail || JSON.stringify(data)));
+            btnNext.innerHTML = 'ĐẶT HÀNG';
+            btnNext.disabled = false;
+          }
+        } catch (err) {
+          alert('Lỗi mạng khi đặt hàng!');
+          btnNext.innerHTML = 'ĐẶT HÀNG';
+          btnNext.disabled = false;
+        }
+      }
     });
     btnPrev.addEventListener('click',()=>{if(currentStep>1)goToStep(currentStep-1)});
 
+    // Calculate total function
+    function calculateTotal() {
+      let subtotal = 0;
+      let itemCount = 0;
+      document.querySelectorAll('.cart-item').forEach(item => {
+        if (item.style.display !== 'none') {
+          const price = parseFloat(item.dataset.price) || 0;
+          const qty = parseInt(item.querySelector('.qty-val').value) || 1;
+          subtotal += price * qty;
+          itemCount += qty;
+          
+          // Cập nhật giá review bên bước 3
+          const itemId = item.dataset.id;
+          const reviewQtySpan = document.querySelector(`.review-qty-${itemId}`);
+          if(reviewQtySpan) reviewQtySpan.textContent = qty;
+          const reviewSubSpan = document.querySelector(`.review-subtotal-${itemId}`);
+          if(reviewSubSpan) reviewSubSpan.textContent = (price * qty).toLocaleString('vi-VN') + ' ₫';
+        }
+      });
+
+      const shipText = document.getElementById('ship-cost').textContent.replace(/[^\d]/g, '');
+      const shipCost = parseInt(shipText) || 0;
+
+      const total = subtotal + shipCost;
+
+      document.getElementById('cart-item-count').textContent = itemCount;
+      document.getElementById('subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' ₫';
+      document.getElementById('total').textContent = total.toLocaleString('vi-VN') + ' ₫';
+      
+      const badge = document.getElementById('cart-count');
+      if (badge) {
+        if (itemCount > 0) { badge.textContent = itemCount; badge.style.display = 'flex'; }
+        else { badge.textContent = '0'; badge.style.display = 'none'; }
+      }
+    }
+
+    async function updateQtyAPI(itemId, qty) {
+      try {
+        await fetch(`/api/cart/cart-items/${itemId}/`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: qty })
+        });
+      } catch (e) { console.error(e); }
+    }
+
     // Qty buttons
-    document.querySelectorAll('.qp').forEach(b=>{b.addEventListener('click',()=>{const i=b.previousElementSibling;if(+i.value<10)i.value=+i.value+1})});
-    document.querySelectorAll('.qm').forEach(b=>{b.addEventListener('click',()=>{const i=b.nextElementSibling;if(+i.value>1)i.value=+i.value-1})});
+    document.querySelectorAll('.qp').forEach(b=>{b.addEventListener('click',()=>{
+      const i=b.previousElementSibling;
+      const itemEl = b.closest('.cart-item');
+      const itemId = itemEl.dataset.id;
+      if(+i.value<10) {
+        i.value=+i.value+1;
+        calculateTotal();
+        updateQtyAPI(itemId, i.value);
+      }
+    })});
+    
+    document.querySelectorAll('.qm').forEach(b=>{b.addEventListener('click',()=>{
+      const i=b.nextElementSibling;
+      const itemEl = b.closest('.cart-item');
+      const itemId = itemEl.dataset.id;
+      if(+i.value>1) {
+        i.value=+i.value-1;
+        calculateTotal();
+        updateQtyAPI(itemId, i.value);
+      }
+    })});
 
     // Remove item
-    document.querySelectorAll('.cart-item-remove').forEach(r=>{r.addEventListener('click',()=>{r.closest('.cart-item').style.display='none';track('remove_from_cart',{})})});
+    document.querySelectorAll('.cart-item-remove').forEach(r=>{
+      r.addEventListener('click', async ()=>{
+        const itemEl = r.closest('.cart-item');
+        const itemId = r.dataset.id;
+        try {
+          const res = await fetch(`/api/cart/cart-items/${itemId}/`, { method: 'DELETE' });
+          if(res.ok) {
+            itemEl.style.display = 'none';
+            itemEl.remove();
+            
+            const reviewEl = document.querySelector(`.review-item[data-id="${itemId}"]`);
+            if(reviewEl) { reviewEl.style.display = 'none'; reviewEl.remove(); }
+            
+            calculateTotal();
+            track('remove_from_cart', { item_id: itemId });
+          } else {
+            alert('Không thể xóa sản phẩm khỏi giỏ hàng.');
+          }
+        } catch(e) { console.error(e); }
+      });
+    });
 
     // Delivery select
     window.selectDelivery=function(el){
       document.querySelectorAll('.delivery-card').forEach(c=>c.classList.remove('selected'));
       el.classList.add('selected');
       document.getElementById('ship-cost').textContent=parseInt(el.dataset.ship).toLocaleString('vi-VN')+' ₫';
+      calculateTotal();
     };
 
     // Payment select
@@ -419,6 +595,50 @@
       send.addEventListener('click',()=>sm(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter')sm(input.value)});
       document.querySelectorAll('.chat-quick-btn').forEach(b=>{b.addEventListener('click',()=>sm(b.dataset.msg))});
     })();
+
+    async function updateCartBadge() {
+      const badge = document.getElementById('cart-count');
+      if (!badge) return;
+      try {
+        const res = await fetch('/api/cart/carts/1/');
+        if (res.ok) {
+          const cartItems = await res.json();
+          const totalQty = Array.isArray(cartItems) ? cartItems.reduce((sum, item) => sum + parseInt(item.quantity || 1), 0) : 0;
+          if (totalQty > 0) { badge.textContent = totalQty; badge.style.display = 'flex'; }
+          else { badge.textContent = '0'; badge.style.display = 'none'; }
+        }
+      } catch (error) { console.error(error); }
+    }
+
+    function setupProfileDropdown() {
+      const profileIcon = document.getElementById('nav-profile');
+      const profileDropdown = document.getElementById('profile-dropdown');
+      if (profileIcon && profileDropdown) {
+        profileIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isActive = profileIcon.classList.contains('profile-active');
+          if (!isActive) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+              profileDropdown.innerHTML = '<div class="profile-dropdown-header"><strong>Khách hàng</strong><span>Chưa đăng nhập</span></div><a href="/auth/" onclick="event.stopPropagation()">Đăng nhập / Đăng ký</a>';
+            } else {
+              const name = localStorage.getItem('user_name') || 'Người dùng';
+              profileDropdown.innerHTML = '<div class="profile-dropdown-header"><strong id="profile-name">' + name + '</strong><span id="profile-email">Chào mừng trở lại</span></div><a href="/profile/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Hồ sơ của tôi</a><a href="/orders/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>Đơn hàng của tôi</a><a href="#" class="text-red" onclick="event.stopPropagation(); handleLogout()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Đăng xuất</a>';
+            }
+            profileIcon.classList.add('profile-active');
+          } else profileIcon.classList.remove('profile-active');
+        });
+        profileDropdown.addEventListener('click', (e) => e.stopPropagation());
+      }
+      document.addEventListener('click', () => { if (profileIcon) profileIcon.classList.remove('profile-active'); });
+    }
+
+    window.handleLogout = function() { localStorage.removeItem('access_token'); localStorage.removeItem('user_name'); window.location.href = '/auth/'; };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateCartBadge();
+      setupProfileDropdown();
+    });
   </script>
 </body>
 </html>

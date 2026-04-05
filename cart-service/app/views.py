@@ -4,8 +4,9 @@ from .models import Cart, CartItem
 from .serializers import CartSerializer, CartItemSerializer
 import requests
 
-# Link gọi sang Book Service để kiểm tra sách
+# Link gọi các Service
 BOOK_SERVICE_URL = "http://book-service:8000"
+CLOTHES_SERVICE_URL = "http://clothes-service:8000"
 
 class CartCreate(APIView):
     def post(self, request):
@@ -18,32 +19,39 @@ class CartCreate(APIView):
 class AddCartItem(APIView):
     def post(self, request):
         book_id = request.data.get("book_id")
-        
+        item_type = request.data.get("item_type", "book")
+
         # ==========================================
         # SỬA TỪ GỐC: CÂN MỌI THỂ LOẠI DATA TỪ FRONTEND
         # Nếu Frontend gửi customer_id -> Lấy
         # Nếu Frontend gửi cart (code cũ) -> Chấp nhận luôn
-        # Nếu Frontend KHÔNG GỬI GÌ CẢ -> Tự ép mặc định là khách hàng số 1
+        # Nếu Frontend KHÔNG GỬI GÌ CẢ -> Tự ép mặc định là khách hàng số 1     
         # ==========================================
         customer_id = request.data.get("customer_id") or request.data.get("cart") or 1
-        
+
         add_qty = int(request.data.get("quantity", 1))
 
-        # 1. Tự động tìm Giỏ hàng của khách này (hoặc tạo mới nếu chưa có)
-        cart, created = Cart.objects.get_or_create(customer_id=customer_id)
-        
-        # 2. Gọi Book Service để check sách thật hay giả
+        # 1. Tự động tìm Giỏ hàng của khách này (hoặc tạo mới nếu chưa có)      
+        cart, created = Cart.objects.get_or_create(customer_id=customer_id)     
+
+        # 2. Gọi Service tương ứng để check sản phẩm thật hay giả
         try:
-            r = requests.get(f"{BOOK_SERVICE_URL}/books/")
-            books = r.json()
-            if not any(str(b["id"]) == str(book_id) for b in books):
-                return Response({"error": "Sách không tồn tại trong kho!"}, status=400)
+            if item_type == "cloth":
+                r = requests.get(f"{CLOTHES_SERVICE_URL}/clothes/")
+                items = r.json()
+                if not any(str(b["id"]) == str(book_id) for b in items):
+                    return Response({"error": "Quần áo không tồn tại trong kho!"}, status=400)
+            else:
+                r = requests.get(f"{BOOK_SERVICE_URL}/books/")
+                items = r.json()
+                if not any(str(b["id"]) == str(book_id) for b in items):
+                    return Response({"error": "Sách không tồn tại trong kho!"}, status=400)
         except Exception:
-            return Response({"error": "Không kết nối được với Book Service"}, status=500)
-            
-        # 3. LOGIC GỘP SÁCH SIÊU CHỐNG LỖI 
-        existing_item = CartItem.objects.filter(cart=cart, book_id=book_id).first()
-        
+            return Response({"error": f"Không kết nối được với {item_type} Service"}, status=500)
+
+        # 3. LOGIC GỘP SÁCH SIÊU CHỐNG LỖI
+        existing_item = CartItem.objects.filter(cart=cart, book_id=book_id, item_type=item_type).first()
+
         if existing_item:
             # Nếu đã có -> Cộng dồn số lượng
             existing_item.quantity += add_qty
@@ -56,10 +64,10 @@ class AddCartItem(APIView):
             # Dọn dẹp key 'cart' cũ nếu có để tránh xung đột với Django
             if "cart" in data:
                 del data["cart"]
-            
+
             # Ép cứng ID giỏ hàng chuẩn xác vào data để lưu
-            data["cart"] = cart.id 
-            
+            data["cart"] = cart.id
+
             serializer = CartItemSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
@@ -67,6 +75,7 @@ class AddCartItem(APIView):
             # In thẳng lỗi ra nếu vẫn tịt để debug
             print("Lỗi Serializer:", serializer.errors)
             return Response(serializer.errors, status=400)
+
 
 class ViewCart(APIView):
     def get(self, request, customer_id):

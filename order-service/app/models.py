@@ -15,5 +15,6 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     book_id = models.IntegerField()
+    item_type = models.CharField(max_length=50, default='book')
     quantity = models.IntegerField()
     price = models.FloatField() # Phải lưu giá tiền tại thời điểm mua, lỡ sau này sách tăng giá!
