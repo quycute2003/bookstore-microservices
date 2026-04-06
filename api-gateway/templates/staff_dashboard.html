@@ -171,7 +171,7 @@
      </svg>
      Thời Trang
     </div>
-    <div class="nav-item" style="cursor:pointer;">
+    <div class="nav-item" onclick="alert('Tính năng quản lý Khách hàng đang phát triển')" style="cursor:pointer;">
      <svg viewbox="0 0 24 24">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2">
       </path>
@@ -187,14 +187,14 @@
     <div class="nav-section">
      AI &amp; Analytics
     </div>
-    <div class="nav-item" style="cursor:pointer;">
+    <div class="nav-item" onclick="document.querySelector('[data-target=\'dashboard\']').click(); setTimeout(() => document.querySelector('.ai-section').scrollIntoView({behavior: 'smooth', block: 'start'}), 100);" style="cursor:pointer;">
      <svg viewbox="0 0 24 24">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12">
       </polyline>
      </svg>
      AI Behavior
     </div>
-    <div class="nav-item" style="cursor:pointer;">
+    <div class="nav-item" onclick="alert('Tính năng báo cáo đang phát triển')" style="cursor:pointer;">
      <svg viewbox="0 0 24 24">
       <line x1="18" x2="18" y1="20" y2="10">
       </line>
@@ -247,9 +247,7 @@
       <div class="stat-label">
        Doanh thu th&aacute;ng
       </div>
-      <div class="stat-value">
-       1.2B ₫
-      </div>
+      <div class="stat-value">{{ total_revenue|vnd }} ₫</div>
       <div class="stat-change up">
        &uarr; 12.5% so với th&aacute;ng trước
       </div>
@@ -258,31 +256,25 @@
       <div class="stat-label">
        &Dstrok;ơn h&agrave;ng
       </div>
-      <div class="stat-value">
-       847
-      </div>
+      <div class="stat-value">{{ orders|length }}</div>
       <div class="stat-change up">
        &uarr; 8.3% so với th&aacute;ng trước
       </div>
      </div>
      <div class="stat-card">
       <div class="stat-label">
-       Kh&aacute;ch h&agrave;ng mới
+       Tổng Sản Phẩm
       </div>
-      <div class="stat-value">
-       1,234
-      </div>
+      <div class="stat-value">{{ total_items }}</div>
       <div class="stat-change up">
        &uarr; 23.1% so với th&aacute;ng trước
       </div>
      </div>
      <div class="stat-card">
       <div class="stat-label">
-       Tỷ lệ ho&agrave;n trả
+       Cảnh b&aacute;o Kho
       </div>
-      <div class="stat-value">
-       2.1%
-      </div>
+      <div class="stat-value" style="color:var(--color-crimson)">{{ low_stock_total }}</div>
       <div class="stat-change down">
        &uarr; 0.3% so với th&aacute;ng trước
       </div>
@@ -372,7 +364,7 @@
       <h3>
        Ph&acirc;n T&iacute;ch H&agrave;nh Vi Kh&aacute;ch H&agrave;ng (AI)
       </h3>
-      <button class="btn-refresh" id="btn-refresh">
+      <button class="btn-refresh" id="btn-refresh" onclick="refreshAI()">
        🔄 Cập nhật từ AI
       </button>
      </div>
@@ -420,10 +412,17 @@
           {{ order.status }}
          </span>
         </td>
-        <td class="action-cell">
-         <button class="btn-action primary" onclick="updateStatus({{ order.id }}, 'APPROVED')" style="padding:6px 12px; background:var(--color-gold); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">
-          Duyệt
-         </button>
+        <td class="action-cell" style="display:flex; gap:4px; align-items:center;">
+         {% if order.status == 'PENDING' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'APPROVED')" style="padding:6px; background:var(--color-gold); color:#fff; border:none; border-radius:4px; cursor:pointer;">Duyệt</button>
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'CANCELLED')" style="padding:6px; background:#8B1A1A; color:#fff; border:none; border-radius:4px; cursor:pointer;">Hủy</button>
+         {% elif order.status == 'APPROVED' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'PAID_AND_SHIPPING')" style="padding:6px; background:#2D6A4F; color:#fff; border:none; border-radius:4px; cursor:pointer;">Giao</button>
+         {% elif order.status == 'PAID_AND_SHIPPING' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'DELIVERED')" style="padding:6px; background:#533483; color:#fff; border:none; border-radius:4px; cursor:pointer;">Hoàn thành</button>
+         {% else %}
+             <span style="font-size:12px;color:var(--color-ash);padding:6px">{{ order.status }}</span>
+         {% endif %}
         </td>
        </tr>
        {% empty %}
@@ -562,10 +561,17 @@
           {{ order.status }}
          </span>
         </td>
-        <td class="action-cell">
-         <button class="btn-action primary" onclick="updateStatus({{ order.id }}, 'APPROVED')" style="padding:6px 12px; background:var(--color-gold); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">
-          Duyệt
-         </button>
+        <td class="action-cell" style="display:flex; gap:4px; align-items:center;">
+         {% if order.status == 'PENDING' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'APPROVED')" style="padding:6px; background:var(--color-gold); color:#fff; border:none; border-radius:4px; cursor:pointer;">Duyệt</button>
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'CANCELLED')" style="padding:6px; background:#8B1A1A; color:#fff; border:none; border-radius:4px; cursor:pointer;">Hủy</button>
+         {% elif order.status == 'APPROVED' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'PAID_AND_SHIPPING')" style="padding:6px; background:#2D6A4F; color:#fff; border:none; border-radius:4px; cursor:pointer;">Giao</button>
+         {% elif order.status == 'PAID_AND_SHIPPING' %}
+             <button class="btn-action" onclick="updateOrderStatus({{ order.id }}, 'DELIVERED')" style="padding:6px; background:#533483; color:#fff; border:none; border-radius:4px; cursor:pointer;">Hoàn thành</button>
+         {% else %}
+             <span style="font-size:12px;color:var(--color-ash);padding:6px">{{ order.status }}</span>
+         {% endif %}
         </td>
        </tr>
        {% empty %}
@@ -581,10 +587,9 @@
    </div>
    <!-- SECTION BOOKS -->
    <div class="content-section" id="section-books" style="display:none;">
-    <div class="table-top">
-     <h3 style="font-size:24px;margin-bottom:20px;">
-      Kho S&aacute;ch
-     </h3>
+    <div class="table-top" style="display:flex; justify-content:space-between; align-items:center;">
+     <h3 style="font-size:24px;margin-bottom:20px;">Kho S&aacute;ch</h3>
+     <button class="btn-refresh" onclick="openForm('book', 'add')" style="background:var(--color-emerald); color:#fff; height:36px;">+ Thêm Sách</button>
     </div>
     <div class="table-card">
      <table class="data-table">
@@ -638,10 +643,9 @@
          </span>
          {% else %}{{ book.stock }}{% endif %}
         </td>
-        <td>
-         <button class="btn-action" onclick="alert('T&iacute;nh n&abreve;ng &dstrok;ang ph&aacute;t triển')" style="padding:6px 12px; background:var(--color-charcoal); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">
-          Sửa
-         </button>
+        <td style="display:flex;gap:4px">
+         <button class="btn-action" onclick="openForm('book', 'edit', {{ book.id }}, {title: '{{ book.title|escapejs }}', author: '{{ book.author|escapejs }}', price: {{ book.price }}, stock: {{ book.stock }}, publisher: '{{ book.publisher|escapejs }}'})" style="padding:6px; background:var(--color-charcoal); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">Sửa</button>
+         <button class="btn-action" onclick="deleteItem('book', {{ book.id }})" style="padding:6px; background:#8B1A1A; color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">Xóa</button>
         </td>
        </tr>
        {% empty %}
@@ -657,10 +661,9 @@
    </div>
    <!-- SECTION CLOTHES -->
    <div class="content-section" id="section-clothes" style="display:none;">
-    <div class="table-top">
-     <h3 style="font-size:24px;margin-bottom:20px;">
-      Kho Thời Trang
-     </h3>
+    <div class="table-top" style="display:flex; justify-content:space-between; align-items:center;">
+     <h3 style="font-size:24px;margin-bottom:20px;">Kho Thời Trang</h3>
+     <button class="btn-refresh" onclick="openForm('cloth', 'add')" style="background:var(--color-emerald); color:#fff; height:36px;">+ Thêm Quần Áo</button>
     </div>
     <div class="table-card">
      <table class="data-table">
@@ -720,10 +723,9 @@
          </span>
          {% else %}{{ cloth.stock }}{% endif %}
         </td>
-        <td>
-         <button class="btn-action" onclick="alert('T&iacute;nh n&abreve;ng &dstrok;ang ph&aacute;t triển')" style="padding:6px 12px; background:var(--color-charcoal); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">
-          Sửa
-         </button>
+        <td style="display:flex;gap:4px">
+         <button class="btn-action" onclick="openForm('cloth', 'edit', {{ cloth.id }}, {name: '{{ cloth.name|escapejs }}', brand: '{{ cloth.brand|escapejs }}', price: {{ cloth.price }}, stock: {{ cloth.stock }}, size: '{{ cloth.size|escapejs }}'})" style="padding:6px; background:var(--color-charcoal); color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">Sửa</button>
+         <button class="btn-action" onclick="deleteItem('cloth', {{ cloth.id }})" style="padding:6px; background:#8B1A1A; color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;">Xóa</button>
         </td>
        </tr>
        {% empty %}
@@ -838,5 +840,141 @@
       }
     }
   </script>
+   
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    // -- ORDER UPDATE --
+    async function updateOrderStatus(orderId, newStatus) {
+        const textStates = {'APPROVED': 'Duyệt', 'CANCELLED': 'Hủy', 'PAID_AND_SHIPPING': 'Giao hàng', 'DELIVERED': 'Giao thành công'};
+        if(!confirm(`Xác nhận ${textStates[newStatus]} đơn #${orderId}?`)) return;
+        try {
+            const res = await axios.patch(`/api/order/orders/${orderId}/status/`, { status: newStatus });
+            if(res.status >= 200 && res.status < 300) {
+                Swal.fire('Thành công', 'Đã cập nhật trạng thái đơn hàng', 'success').then(() => location.reload());
+            }
+        } catch (err) {
+            Swal.fire('Lỗi', err.response?.data?.error || 'Không thể cập nhật đơn hàng', 'error');
+        }
+    }
+
+    // -- CRUD BOOKS & CLOTHES --
+    async function deleteItem(type, id) {
+        let endpoint = type === 'book' ? `/api/book/books/${id}/` : `/api/clothes/clothes/${id}/`;
+        const confirmData = await Swal.fire({
+            title: 'Bạn chắc chứ?',
+            text: `Xóa ${type === 'book' ? 'sách' : 'sản phẩm'} này? Hành động này không thể hoàn tác!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#8B1A1A'
+        });
+        if(confirmData.isConfirmed) {
+            try {
+               await axios.delete(endpoint);
+               location.reload();
+            } catch(err) {
+               Swal.fire('Lỗi', 'Không thể xóa!', 'error');
+            }
+        }
+    }
+
+    async function openForm(type, action, id=null, data={}) {
+        let isBook = type === 'book';
+        let title = action === 'add' ? `Thêm ${isBook ? 'Sách' : 'Thời Trang'}` : `Sửa ${isBook ? 'Sách' : 'Thời Trang'}`;
+        
+        let form_html = isBook ? `
+            <input id="swal-inp-title" class="swal2-input" placeholder="Tên Sách" value="${data.title || ''}">
+            <input id="swal-inp-author" class="swal2-input" placeholder="Tác giả" value="${data.author || ''}">
+            <input id="swal-inp-publisher" class="swal2-input" placeholder="Nhà XB" value="${data.publisher || ''}">
+            <input id="swal-inp-price" class="swal2-input" type="number" placeholder="Giá" value="${data.price || ''}">
+            <input id="swal-inp-stock" class="swal2-input" type="number" placeholder="Tồn Kho" value="${data.stock || ''}">
+        ` : `
+            <input id="swal-inp-name" class="swal2-input" placeholder="Tên Quần Áo" value="${data.name || ''}">
+            <input id="swal-inp-brand" class="swal2-input" placeholder="Thương hiệu" value="${data.brand || ''}">
+            <input id="swal-inp-size" class="swal2-input" placeholder="Size (S/M/L/...)" value="${data.size || ''}">
+            <input id="swal-inp-price" class="swal2-input" type="number" placeholder="Giá" value="${data.price || ''}">
+            <input id="swal-inp-stock" class="swal2-input" type="number" placeholder="Tồn Kho" value="${data.stock || ''}">
+        `;
+
+        const { value: formValues } = await Swal.fire({
+            title: title,
+            html: form_html,
+            focusConfirm: false,
+            showCancelButton: true,
+            preConfirm: () => {
+                if(isBook) {
+                    return {
+                        title: document.getElementById('swal-inp-title').value,
+                        author: document.getElementById('swal-inp-author').value,
+                        publisher: document.getElementById('swal-inp-publisher').value,
+                        price: document.getElementById('swal-inp-price').value,
+                        stock: document.getElementById('swal-inp-stock').value,
+                        category_id: 1 
+                    }
+                } else {
+                    return {
+                        name: document.getElementById('swal-inp-name').value,
+                        brand: document.getElementById('swal-inp-brand').value,
+                        size: document.getElementById('swal-inp-size').value,
+                        price: document.getElementById('swal-inp-price').value,
+                        stock: document.getElementById('swal-inp-stock').value,
+                        category_id: 2
+                    }
+                }
+            }
+        });
+
+        if(formValues) {
+            let endpoint = type === 'book' ? `/api/book/books/` : `/api/clothes/clothes/`;
+            if (action === 'edit') endpoint += id + '/';
+            
+            try {
+                let res;
+                if (action === 'add') res = await axios.post(endpoint, formValues);
+                else res = await axios.put(endpoint, formValues);
+                
+                if(res.status >= 200 && res.status < 300) {
+                    Swal.fire('Thành công', '', 'success').then(()=>location.reload());
+                }
+            } catch(err) {
+                Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+            }
+        }
+    }
+
+    // Overriding the previous useless refreshAI function
+    window.refreshAI = async function() {
+      const aiBtn = document.getElementById('btn-refresh');
+      const originalText = aiBtn ? aiBtn.innerText : "Refresh AI";
+      if (aiBtn) aiBtn.innerText = 'Đang phân tích...';
+      try {
+        const response = await fetch('http://localhost:8020/analyze-behavior', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-API-Key': 'bookstore-ai-secret-key-2024'},
+          body: JSON.stringify({
+            user_id: 'user_001', 
+            sessions: [
+              {"click_count": 25, "view_count": 10, "purchase_count": 3, "time_on_page": 5.0, "cart_add_count": 4, "search_count": 6, "session_duration": 20, "avg_price_viewed": 150, "category_diversity": 0.5, "return_rate": 0.05}
+            ]
+          })
+        });
+        
+        const data = await response.json();
+        
+        const segmentsStr = Array.isArray(data.segments) ? data.segments.join(", ") : data.segments;
+        const aiNodes = document.querySelectorAll(".ai-card");
+        if(aiNodes.length > 0) {
+            aiNodes[0].innerHTML = `<h4>📈 Phân tích cá nhân hóa</h4><p>${data.prediction || 'Phát hiện sự thay đổi.'}</p><span class="tag tag-segment">${segmentsStr}</span>`;
+        }
+        Swal.fire('Thành công','Dữ liệu AI đã được áp dụng.','success');
+      } catch (err) {
+        console.error(err);
+        Swal.fire('Lỗi', 'AI Behavior Service chưa sẵn sàng trên Gateway proxy!', 'error');
+      } finally {
+        if (aiBtn) aiBtn.innerText = originalText;
+      }
+    }
+  </script>
+
  </body>
 </html>
