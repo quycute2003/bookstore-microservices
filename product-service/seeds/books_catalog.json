@@ -1,0 +1,172 @@
+[
+  {
+    "id": 1, "title": "Chiến Tranh và Hòa Bình", "author": "Leo Tolstoy",
+    "price": 175000, "currency": "VND", "stock": 45,
+    "category": "Văn học nước ngoài",
+    "description": "Tuyệt tác văn học Nga, bức tranh toàn cảnh về xã hội Nga thời Napoleon. Tác phẩm đồ sộ với hơn 1200 trang, xoay quanh cuộc sống của 5 gia đình quý tộc Nga.",
+    "image_url": "https://covers.openlibrary.org/b/isbn/9780199232765-L.jpg"
+  },
+  {
+    "id": 2, "title": "Tội Ác và Hình Phạt", "author": "Fyodor Dostoevsky",
+    "price": 125000, "currency": "VND", "stock": 60,
+    "category": "Văn học nước ngoài",
+    "description": "Tiểu thuyết tâm lý kinh điển về Raskolnikov, sinh viên nghèo phạm tội giết người và hành trình đấu tranh nội tâm đầy ám ảnh.",
+    "image_url": "https://covers.openlibrary.org/b/isbn/9780143058144-L.jpg"
+  },
+  {
+    "id": 3, "title": "Anh Em Nhà Karamazov", "author": "Fyodor Dostoevsky",
+    "price": 155000, "currency": "VND", "stock": 38,
+    "category": "Văn học nước ngoài",
+    "description": "Kiệt tác cuối cùng của Dostoevsky, câu chuyện về gia đình Karamazov với những xung đột triết học, đạo đức và tôn giáo sâu sắc."
+  },
+  {
+    "id": 4, "title": "Anna Karenina", "author": "Leo Tolstoy",
+    "price": 145000, "currency": "VND", "stock": 52,
+    "category": "Văn học nước ngoài",
+    "description": "Bi kịch tình yêu kinh điển của Anna Karenina trong xã hội thượng lưu Nga thế kỷ 19. Mở đầu với câu nói nổi tiếng: Mọi gia đình hạnh phúc đều giống nhau."
+  },
+  {
+    "id": 5, "title": "Nhà Giả Kim", "author": "Paulo Coelho",
+    "price": 79000, "currency": "VND", "stock": 95,
+    "category": "Văn học nước ngoài",
+    "description": "Câu chuyện về chàng chăn cừu Santiago và hành trình theo đuổi giấc mơ. Cuốn sách truyền cảm hứng bán chạy nhất mọi thời đại."
+  },
+  {
+    "id": 6, "title": "Harry Potter và Hòn Đá Phù Thủy", "author": "J.K. Rowling",
+    "price": 115000, "currency": "VND", "stock": 200,
+    "category": "Văn học nước ngoài",
+    "description": "Tập đầu tiên trong series Harry Potter huyền thoại. Harry khám phá mình là phù thủy và bước vào thế giới phép thuật Hogwarts."
+  },
+  {
+    "id": 7, "title": "Kiêu Hãnh và Định Kiến", "author": "Jane Austen",
+    "price": 92000, "currency": "VND", "stock": 45,
+    "category": "Văn học nước ngoài",
+    "description": "Romance kinh điển về Elizabeth Bennet và Mr. Darcy. Tác phẩm châm biếm sắc sảo về xã hội Anh quốc thế kỷ 19."
+  },
+  {
+    "id": 8, "title": "Bố Già", "author": "Mario Puzo",
+    "price": 98000, "currency": "VND", "stock": 60,
+    "category": "Văn học nước ngoài",
+    "description": "Tiểu thuyết kinh điển về gia tộc mafia Corleone. Bức tranh quyền lực, gia đình và tội ác trong thế giới ngầm nước Mỹ."
+  },
+  {
+    "id": 9, "title": "Những Người Khốn Khổ", "author": "Victor Hugo",
+    "price": 145000, "currency": "VND", "stock": 35,
+    "category": "Văn học nước ngoài",
+    "description": "Kiệt tác văn học Pháp về Jean Valjean và hành trình chuộc tội. Bức tranh xã hội Pháp thế kỷ 19 đầy bi tráng."
+  },
+  {
+    "id": 10, "title": "1984", "author": "George Orwell",
+    "price": 88000, "currency": "VND", "stock": 110,
+    "category": "Văn học nước ngoài",
+    "description": "Tiểu thuyết dystopia kinh điển về xã hội toàn trị. Big Brother is watching you - tác phẩm vẫn ám ảnh và thời sự đến ngày nay."
+  },
+  {
+    "id": 11, "title": "Clean Code", "author": "Robert C. Martin",
+    "price": 185000, "currency": "VND", "stock": 40,
+    "category": "Khoa học - Công nghệ",
+    "description": "Kinh thánh của lập trình viên về cách viết code sạch, dễ đọc và dễ bảo trì. Mọi developer nên đọc ít nhất một lần."
+  },
+  {
+    "id": 12, "title": "Design Patterns - Gang of Four", "author": "Erich Gamma et al.",
+    "price": 195000, "currency": "VND", "stock": 25,
+    "category": "Khoa học - Công nghệ",
+    "description": "23 design patterns kinh điển trong lập trình hướng đối tượng. Sách tham khảo không thể thiếu cho software engineer."
+  },
+  {
+    "id": 13, "title": "Python Crash Course", "author": "Eric Matthes",
+    "price": 195000, "currency": "VND", "stock": 70,
+    "category": "Khoa học - Công nghệ",
+    "description": "Hướng dẫn Python từ cơ bản đến nâng cao với các project thực tế: game, data visualization và web application."
+  },
+  {
+    "id": 14, "title": "AI Superpowers - Kỷ Nguyên AI", "author": "Kai-Fu Lee",
+    "price": 128000, "currency": "VND", "stock": 55,
+    "category": "Khoa học - Công nghệ",
+    "description": "Phân tích cuộc đua AI giữa Mỹ và Trung Quốc, tương lai của trí tuệ nhân tạo và tác động đến xã hội toàn cầu."
+  },
+  {
+    "id": 15, "title": "The Pragmatic Programmer", "author": "David Thomas & Andrew Hunt",
+    "price": 175000, "currency": "VND", "stock": 35,
+    "category": "Khoa học - Công nghệ",
+    "description": "Cẩm nang thực chiến cho lập trình viên chuyên nghiệp. Từ kỹ thuật coding đến tư duy giải quyết vấn đề."
+  },
+  {
+    "id": 16, "title": "Tư Duy Nhanh và Chậm", "author": "Daniel Kahneman",
+    "price": 135000, "currency": "VND", "stock": 75,
+    "category": "Kinh tế - Kinh doanh",
+    "description": "Tác phẩm Nobel Prize về 2 hệ thống tư duy của con người. Giải thích tại sao chúng ta đưa ra quyết định phi lý trong cuộc sống và kinh doanh."
+  },
+  {
+    "id": 17, "title": "Zero to One - Từ Không Đến Một", "author": "Peter Thiel",
+    "price": 110000, "currency": "VND", "stock": 88,
+    "category": "Kinh tế - Kinh doanh",
+    "description": "Triết lý khởi nghiệp từ đồng sáng lập PayPal. Tạo ra cái mới (0→1) thay vì copy (1→n). Ngắn gọn, súc tích, đầy insight."
+  },
+  {
+    "id": 18, "title": "Cha Giàu Cha Nghèo", "author": "Robert Kiyosaki",
+    "price": 95000, "currency": "VND", "stock": 130,
+    "category": "Kinh tế - Kinh doanh",
+    "description": "Best-seller về tài chính cá nhân. So sánh tư duy tiền bạc của 2 người cha và bài học về đầu tư, tài sản và tự do tài chính."
+  },
+  {
+    "id": 19, "title": "Đắc Nhân Tâm", "author": "Dale Carnegie",
+    "price": 88000, "currency": "VND", "stock": 150,
+    "category": "Kỹ năng sống",
+    "description": "Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử. Hướng dẫn cách tạo ấn tượng tốt và xây dựng mối quan hệ."
+  },
+  {
+    "id": 20, "title": "7 Thói Quen của Người Thành Đạt", "author": "Stephen R. Covey",
+    "price": 118000, "currency": "VND", "stock": 160,
+    "category": "Kỹ năng sống",
+    "description": "Framework 7 thói quen để thành công bền vững. Từ chủ động, ưu tiên quan trọng đến tư duy win-win và rèn luyện liên tục."
+  },
+  {
+    "id": 21, "title": "Nghĩ Giàu Làm Giàu", "author": "Napoleon Hill",
+    "price": 88000, "currency": "VND", "stock": 200,
+    "category": "Kỹ năng sống",
+    "description": "Cuốn sách về sức mạnh tư duy tích cực và các nguyên tắc thành công. Dựa trên 20 năm nghiên cứu hàng trăm triệu phú."
+  },
+  {
+    "id": 22, "title": "Atomic Habits - Thói Quen Nguyên Tử", "author": "James Clear",
+    "price": 125000, "currency": "VND", "stock": 175,
+    "category": "Tâm lý học",
+    "description": "Hệ thống xây dựng thói quen tốt và loại bỏ thói quen xấu. Thay đổi 1% mỗi ngày tạo nên sự khác biệt lớn."
+  },
+  {
+    "id": 23, "title": "Đi Tìm Lẽ Sống", "author": "Viktor Frankl",
+    "price": 79000, "currency": "VND", "stock": 85,
+    "category": "Tâm lý học",
+    "description": "Hồi ký cảm động của bác sĩ tâm lý sống sót qua trại tập trung Nazi. Tìm ý nghĩa cuộc sống ngay trong hoàn cảnh khốn cùng nhất."
+  },
+  {
+    "id": 24, "title": "Dám Bị Ghét", "author": "Ichiro Kishimi & Fumitake Koga",
+    "price": 98000, "currency": "VND", "stock": 140,
+    "category": "Tâm lý học",
+    "description": "Triết lý Adler về can đảm sống theo cách của mình. Đối thoại giữa triết gia và chàng trai trẻ về tự do và hạnh phúc."
+  },
+  {
+    "id": 25, "title": "Sapiens: Lược Sử Loài Người", "author": "Yuval Noah Harari",
+    "price": 165000, "currency": "VND", "stock": 120,
+    "category": "Lịch sử - Địa lý",
+    "description": "Hành trình 70,000 năm của loài Homo Sapiens từ vượn thành chúa tể. Góc nhìn độc đáo về lịch sử, văn hóa và tương lai nhân loại."
+  },
+  {
+    "id": 26, "title": "Homo Deus: Lược Sử Tương Lai", "author": "Yuval Noah Harari",
+    "price": 155000, "currency": "VND", "stock": 95,
+    "category": "Lịch sử - Địa lý",
+    "description": "Tiếp nối Sapiens, Harari dự đoán tương lai nhân loại với AI, công nghệ sinh học và dataism. Con người sẽ tiến hóa ra sao?"
+  },
+  {
+    "id": 27, "title": "Hoàng Tử Bé", "author": "Antoine de Saint-Exupéry",
+    "price": 65000, "currency": "VND", "stock": 250,
+    "category": "Thiếu nhi",
+    "description": "Câu chuyện giản dị mà sâu sắc về tình bạn, tình yêu và ý nghĩa cuộc sống. Điều cốt yếu vô hình trước mắt thường."
+  },
+  {
+    "id": 28, "title": "Truyện Cổ Grimm", "author": "Anh Em Nhà Grimm",
+    "price": 75000, "currency": "VND", "stock": 180,
+    "category": "Thiếu nhi",
+    "description": "Tuyển tập truyện cổ tích kinh điển: Bạch Tuyết, Lọ Lem, Rapunzel, Hansel và Gretel. Những bài học đạo đức qua thế hệ."
+  }
+]

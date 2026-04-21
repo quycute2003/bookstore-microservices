@@ -4,9 +4,9 @@ from .models import Cart, CartItem
 from .serializers import CartSerializer, CartItemSerializer
 import requests
 
-# Link gọi các Service
-BOOK_SERVICE_URL = "http://book-service:8000"
-CLOTHES_SERVICE_URL = "http://clothes-service:8000"
+# Link gọi các Service (book-service + clothes-service đã gộp vào product-service)
+BOOK_SERVICE_URL = "http://product-service:8000"
+CLOTHES_SERVICE_URL = "http://product-service:8000"
 
 class CartCreate(APIView):
     def post(self, request):

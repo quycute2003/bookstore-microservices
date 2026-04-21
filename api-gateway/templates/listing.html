@@ -199,6 +199,14 @@
       <aside class="sidebar">
         <h3>Bộ Lọc</h3>
         <div class="filter-group">
+          <div class="filter-title" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('hidden')">Loại sản phẩm</div>
+          <div class="filter-body">
+            {% for ptype, label in product_types %}
+            <label class="filter-check"><input type="checkbox" class="type-filter" value="{{ ptype }}"> {{ label }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="filter-group">
           <div class="filter-title" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('hidden')">Danh mục Sách</div>
           <div class="filter-body">
             {% for cat in categories %}
@@ -207,7 +215,7 @@
           </div>
         </div>
         <div class="filter-group">
-          <div class="filter-title" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('hidden')">Thương hiệu Thời trang</div>
+          <div class="filter-title" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('hidden')">Thương hiệu</div>
           <div class="filter-body">
             {% for brand in brands %}
             <label class="filter-check"><input type="checkbox" class="brand-filter" value="{{ brand }}"> {{ brand }}</label>
@@ -218,6 +226,12 @@
 
       <!-- MAIN -->
       <div class="listing-main">
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <input id="listing-search-input" type="text" placeholder="Tìm kiếm sản phẩm..."
+            style="flex:1;padding:10px 16px;border:1px solid #e0d9cc;border-radius:8px;font-size:14px;outline:none;font-family:inherit;"
+            oninput="activeQuery=this.value.toLowerCase();applyFilters();"
+            onkeydown="if(event.key==='Enter'&&this.value){fetch('/track/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({action:'search'})}).catch(()=>{})}">
+        </div>
         <div class="toolbar">
           <span class="toolbar-count">Hiển thị <strong>12</strong> sản phẩm</span>
           <div class="toolbar-right">
@@ -267,7 +281,17 @@
   </div>
 
   <script>
-    const track=(e,d)=>{console.log('%c[BEHAVIOR]','color:#2D6A4F;font-weight:bold',e,d)};
+    function getCookie(name){return(document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name+'='))||'').split('=')[1]||''}
+    const _actionMap={'product_click':'view','add_to_cart':'cart_add','purchase':'purchase','search':'search'};
+    const track=(e,d)=>{
+      console.log('%c[BEHAVIOR]','color:#2D6A4F;font-weight:bold',e,d);
+      const action=_actionMap[e];
+      if(!action)return;
+      const product=e==='product_click'?{id:d.id,type:(d.id||'').split('_')[0],name:d.name,category:d.category}
+                   :e==='add_to_cart'?{id:d.id,price:d.price}:null;
+      fetch('/track/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body:JSON.stringify({action,product})}).catch(()=>{});
+    };
     track('page_view',{page:'listing',timestamp:Date.now()});
 
     // Navbar scroll
@@ -278,6 +302,24 @@
     let filteredProducts = [...allProducts];
     let currentPage = 1;
     const itemsPerPage = 9;
+    let activeQuery = '';
+
+    // Đọc ?q= từ URL khi vào trang từ search homepage
+    (function initSearch() {
+      const q = new URLSearchParams(window.location.search).get('q') || '';
+      if (!q) return;
+      activeQuery = q.toLowerCase();
+      // Track search behavior
+      fetch('/track/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({action: 'search'}),
+      }).catch(() => {});
+      // Fill search bar nếu có
+      const bar = document.getElementById('listing-search-input');
+      if (bar) bar.value = q;
+      applyFilters();
+    })();
 
     function formatPrice(price) {
       if (!price) return '0 ₫';
@@ -360,31 +402,29 @@
     }
 
     function applyFilters() {
-      const selectedCats = Array.from(document.querySelectorAll('.cat-filter:checked')).map(cb => cb.value);
+      const selectedTypes  = Array.from(document.querySelectorAll('.type-filter:checked')).map(cb => cb.value);
+      const selectedCats   = Array.from(document.querySelectorAll('.cat-filter:checked')).map(cb => cb.value);
       const selectedBrands = Array.from(document.querySelectorAll('.brand-filter:checked')).map(cb => cb.value);
+      const q = activeQuery;
 
       filteredProducts = allProducts.filter(p => {
-        let passCat = selectedCats.length === 0 || (p.type === 'book' && selectedCats.includes(p.category_name));
-        let passBrand = selectedBrands.length === 0 || (p.type === 'cloth' && selectedBrands.includes(p.category_name));
-        
-        // If they checked BOTH a book category and a clothes brand, show matches for either
-        if (selectedCats.length > 0 && selectedBrands.length > 0) {
-          if (!passCat && !passBrand) return false;
-        } else if (selectedCats.length > 0) {
-          if (!passCat) return false;
-        } else if (selectedBrands.length > 0) {
-          if (!passBrand) return false;
+        const attrs = p.attributes || {};
+        if (selectedTypes.length  && !selectedTypes.includes(p.type)) return false;
+        if (selectedCats.length   && !(p.type === 'book' && selectedCats.includes(p.category_name))) return false;
+        if (selectedBrands.length && !selectedBrands.includes(attrs.brand || p.category_name)) return false;
+        if (q) {
+          const hay = [p.title, p.name, p.author, attrs.brand, p.type_label, p.category_name]
+            .filter(Boolean).join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
         }
-
         return true;
       });
 
-      currentPage = 1; // Reset to first page
+      currentPage = 1;
       renderProducts();
     }
 
-    // Bind event listeners to checkboxes
-    document.querySelectorAll('.cat-filter, .brand-filter').forEach(cb => {
+    document.querySelectorAll('.type-filter, .cat-filter, .brand-filter').forEach(cb => {
       cb.addEventListener('change', applyFilters);
     });
 
@@ -444,7 +484,7 @@
 
     // Chat
     (function(){
-      const AI_API='http://localhost:8020',API_KEY='bookstore-ai-secret-key-2024';
+      const AI_API='/api/ai-behavior',API_KEY='bookstore-ai-secret-key-2024';
       const userId=localStorage.getItem('lumiere_uid')||('user_'+Date.now());localStorage.setItem('lumiere_uid',userId);
       const bubble=document.getElementById('chat-bubble'),panel=document.getElementById('chat-panel'),closeBtn=document.getElementById('chat-close'),input=document.getElementById('chat-input'),sendBtn=document.getElementById('chat-send'),msgs=document.getElementById('chat-messages'),qr=document.getElementById('chat-quick-replies');
       bubble.addEventListener('click',()=>{panel.classList.toggle('open');if(panel.classList.contains('open'))input.focus()});
@@ -493,7 +533,7 @@
       document.addEventListener('click', () => { if (profileIcon) profileIcon.classList.remove('profile-active'); });
     }
 
-    window.handleLogout = function() { localStorage.removeItem('access_token'); localStorage.removeItem('user_name'); window.location.href = '/auth/'; };
+    window.handleLogout = function() { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); localStorage.removeItem('user_name'); localStorage.removeItem('user_role'); localStorage.removeItem('lumiere_uid'); localStorage.removeItem('quystore_user'); document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax'; window.location.href = '/auth/'; };
 
     document.addEventListener('DOMContentLoaded', () => {
       updateCartBadge();

@@ -1043,7 +1043,7 @@
        AI CHAT WIDGET
        ========================== */
     (function() {
-      const AI_API = 'http://localhost:8020';
+      const AI_API = '/api/ai-behavior';
       const API_KEY = 'bookstore-ai-secret-key-2024';
       const userId = localStorage.getItem('lumiere_uid') || ('user_' + Date.now());
       localStorage.setItem('lumiere_uid', userId);
@@ -1241,54 +1241,53 @@
       }
     }
 
-    // Load AI recommendations (mix of books and clothes)
+    // Load AI recommendations — personalized by behavior
     async function loadRecommendations() {
       try {
-        const booksRes = await fetch('/api/book/books/?limit=2');
-        const clothesRes = await fetch('/api/clothes/clothes/?limit=2');
-        
-        const books = await booksRes.json();
-        const clothes = await clothesRes.json();
-        
+        const res = await fetch('/recommendations/');
+        const data = await res.json();
+
         const grid = document.getElementById('ai-grid');
+        const note = document.querySelector('.ai-note');
         grid.innerHTML = '';
-        
-        const allItems = [];
-        books.slice(0, 2).forEach(b => allItems.push({ ...b, type: 'book' }));
-        clothes.slice(0, 2).forEach(c => allItems.push({ ...c, type: 'clothes' }));
-        
-        allItems.forEach((item, idx) => {
+        if (note && data.reason) note.textContent = data.reason;
+
+        (data.products || []).forEach((item, idx) => {
           const priceFormatted = formatPrice(item.price);
           const card = document.createElement('div');
           card.className = 'product-card fade-in';
-          
-          // 🔥 SỬA: Đổi 'B'/'C' thành 'book_' / 'cloth_'
-          const realType = item.type === 'book' ? 'book_' : 'cloth_';
-          card.dataset.id = realType + item.id;
-          card.dataset.name = item.type === 'book' ? item.title : item.name;
-          card.dataset.category = item.type === 'book' ? 'Sách' : 'Thời Trang';
-          
-          // 🔥 THÊM: Sự kiện click chuyển trang
-          card.style.cursor = 'pointer';
-          card.onclick = () => window.location.href = `/product/${realType}${item.id}/`;
 
-          const imageUrl = item.image_url || `data:image/svg+xml,...`;
-          // Giữ nguyên đoạn HTML card.innerHTML ...  
-          const label = item.type === 'book' ? item.author : item.brand;
-          const title = item.type === 'book' ? item.title : item.name;
-          
+          const pid = item.product_id || `${item.type}_${item.id}`;
+          card.dataset.id = pid;
+          card.dataset.name = item.title || item.name || '';
+          card.dataset.category = item.type_label || item.type || '';
+          card.style.cursor = 'pointer';
+          card.onclick = () => {
+            fetch('/track/', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+              body: JSON.stringify({action: 'view', product: item}),
+            }).catch(() => {});
+            window.location.href = `/product/${pid}/`;
+          };
+
+          const imageUrl = item.image_url || '';
+          const attrs = item.attributes || {};
+          const subtitle = item.author || attrs.brand || item.type_label || '';
+          const title = item.title || item.name || '';
+
           card.innerHTML = `
             <div class="card-img" style="background-image: url('${imageUrl}'); background-size: cover; background-position: center;">
               <img style="display: none;" src="${imageUrl}" alt="${title}">
               <div class="card-heart"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
             </div>
             <div class="card-body">
-              <p class="card-category">${label}</p>
+              <p class="card-category">${subtitle}</p>
               <h4 class="card-title">${title}</h4>
               <p class="card-price">${priceFormatted}</p>
             </div>
           `;
-          
+
           setTimeout(() => {
             grid.appendChild(card);
             card.classList.add('visible');
@@ -1298,6 +1297,11 @@
       } catch (e) {
         console.error('Failed to load recommendations:', e);
       }
+    }
+
+    function getCookie(name) {
+      return document.cookie.split(';').map(c => c.trim())
+        .find(c => c.startsWith(name + '='))?.split('=')[1] || '';
     }
 
     // Reattach event listeners to newly added elements
@@ -1428,6 +1432,10 @@
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_role');
       localStorage.removeItem('user_name');
+      localStorage.removeItem('lumiere_uid');
+      localStorage.removeItem('quystore_user');
+      // Xóa cookie — middleware đọc cookie nên phải clear cả đây
+      document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax';
       const toast = document.getElementById('toast-message');
       toast.textContent = 'Đã đăng xuất thành công!';
       toast.classList.add('show');

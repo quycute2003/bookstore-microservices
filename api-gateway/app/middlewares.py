@@ -16,6 +16,9 @@ class JWTAuthMiddleware:
         self.public_paths = [
             '/api/auth/login/',
             '/api/auth/register/',
+            '/api/book/',
+            '/api/clothes/',
+            '/api/product/',
             '/login/',
             '/auth/',
             '/listing/',

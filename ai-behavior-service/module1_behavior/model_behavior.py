@@ -28,7 +28,7 @@ from sklearn.preprocessing import StandardScaler
 
 from module1_behavior.data_pipeline import (
     create_dataloaders, preprocess_single_user,
-    BEHAVIOR_LABELS, NUM_FEATURES, NUM_SESSIONS
+    BEHAVIOR_LABELS, NUM_FEATURES, NUM_SESSIONS, NUM_CLASSES
 )
 
 
@@ -48,7 +48,7 @@ class BehaviorModel(nn.Module):
     """
 
     def __init__(self, input_dim=NUM_FEATURES, hidden_dim=128,
-                 embedding_dim=128, num_classes=5, num_heads=4, dropout=0.3):
+                 embedding_dim=128, num_classes=NUM_CLASSES, num_heads=4, dropout=0.3):
         super().__init__()
 
         # 1. Chiếu features thô sang không gian ẩn
@@ -188,7 +188,8 @@ def evaluate_model(model, test_loader, device='cpu'):
 
     report = classification_report(
         all_labels, all_preds,
-        target_names=[BEHAVIOR_LABELS[i] for i in range(5)]
+        target_names=[BEHAVIOR_LABELS[i] for i in range(NUM_CLASSES)],
+        zero_division=0
     )
     return acc, f1, auc, report
 
@@ -244,7 +245,7 @@ def predict_behavior(model, session_data, scaler, device='cpu'):
         "confidence": round(probs[pred_id].item(), 4),
         "probabilities": {
             BEHAVIOR_LABELS[i]: round(probs[i].item(), 4)
-            for i in range(5)
+            for i in range(NUM_CLASSES)
         },
         "embedding": embedding[0].cpu().numpy().tolist(),
     }
@@ -259,7 +260,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # 1. Tạo dữ liệu
-    train_loader, test_loader, scaler = create_dataloaders(num_users_per_class=200)
+    train_loader, test_loader, scaler = create_dataloaders(num_users_per_class=63)
 
     # 2. Khởi tạo model
     device = "cuda" if torch.cuda.is_available() else "cpu"

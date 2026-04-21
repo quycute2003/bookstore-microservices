@@ -18,4 +18,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Lệnh khởi động server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate --run-syncdb && python manage.py runserver 0.0.0.0:8000"]

@@ -34,6 +34,144 @@ CHUNK_OVERLAP = 50     # Ký tự overlap giữa các chunk
 KB_DIR = os.path.join(os.path.dirname(__file__), "knowledge_base")
 INDEX_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 
+# =============================================
+# BRAND ALIASES (Fix B - query expansion)
+# =============================================
+# Map canonical brand name -> list of aliases/acronyms
+BRAND_ALIASES = {
+    "Louis Vuitton": ["LV"],
+    "Yves Saint Laurent": ["YSL", "Saint Laurent"],
+    "Christian Dior": ["Dior", "CD"],
+    "Gucci": ["GG"],
+    "Chanel": ["CC"],
+    "Hermes": ["Hermès"],
+    "Balenciaga": ["BLCG"],
+    "Versace": [],
+    "Prada": [],
+    "Burberry": [],
+}
+
+# Reverse lookup: alias (lowercase) -> canonical brand
+_ALIAS_TO_BRAND = {}
+for _canon, _aliases in BRAND_ALIASES.items():
+    _ALIAS_TO_BRAND[_canon.lower()] = _canon
+    for _a in _aliases:
+        _ALIAS_TO_BRAND[_a.lower()] = _canon
+
+
+def expand_query(query: str) -> str:
+    """
+    Mở rộng query bằng cách thêm các alias/canonical name của brand.
+    Ví dụ: 'áo LV' -> 'áo LV Louis Vuitton'
+    Giữ nguyên query gốc và thêm các từ mở rộng vào cuối.
+    """
+    if not query:
+        return query
+    tokens = query.lower().split()
+    extras = set()
+    for tok in tokens:
+        # Strip punctuation
+        clean = tok.strip(".,!?:;'\"()[]{}")
+        if clean in _ALIAS_TO_BRAND:
+            canon = _ALIAS_TO_BRAND[clean]
+            extras.add(canon)
+            for a in BRAND_ALIASES.get(canon, []):
+                extras.add(a)
+    if extras:
+        return query + " " + " ".join(extras)
+    return query
+
+
+def _format_price(price, currency="VND") -> str:
+    """Format giá tiền VND với dấu chấm ngàn."""
+    try:
+        p = int(float(price))
+        return f"{p:,}".replace(",", ".") + f" {currency}"
+    except (TypeError, ValueError):
+        return f"{price} {currency}"
+
+
+def _format_item(item, source: str) -> str:
+    """
+    Convert JSON item thành natural text để retrieval tốt hơn.
+    Tự động detect loại (book / clothes / category / scenario) dựa trên schema.
+    """
+    if not isinstance(item, dict):
+        return json.dumps(item, ensure_ascii=False)
+
+    # ---- Book (có title + author) ----
+    if "title" in item and "author" in item:
+        lines = [f"Sản phẩm sách: {item['title']}"]
+        lines.append(f"Tác giả: {item['author']}")
+        if "category" in item:
+            lines.append(f"Thể loại: {item['category']}")
+        if "price" in item:
+            lines.append(f"Giá: {_format_price(item['price'], item.get('currency', 'VND'))}")
+        if "stock" in item:
+            lines.append(f"Tồn kho: còn {item['stock']} cuốn")
+        if "description" in item:
+            lines.append(f"Mô tả: {item['description']}")
+        return "\n".join(lines)
+
+    # ---- Clothes / fashion item (có name + brand hoặc price) ----
+    if "name" in item and ("brand" in item or ("price" in item and "size" in item)):
+        brand = item.get("brand", "")
+        name = item["name"]
+        aliases = BRAND_ALIASES.get(brand, [])
+        brand_display = brand
+        if aliases:
+            brand_display = f"{brand} ({', '.join(aliases)})"
+        lines = [f"Sản phẩm thời trang: {name}"]
+        if brand:
+            # Lặp brand + alias để BM25 match được cả canonical lẫn acronym
+            lines.append(f"Thương hiệu: {brand_display}")
+            if aliases:
+                lines.append(f"Từ khoá thương hiệu: {brand} " + " ".join(aliases))
+        if "category" in item:
+            lines.append(f"Danh mục: {item['category']}")
+        if "size" in item:
+            lines.append(f"Size: {item['size']}")
+        if "color" in item:
+            lines.append(f"Màu sắc: {item['color']}")
+        if "price" in item:
+            lines.append(f"Giá: {_format_price(item['price'], item.get('currency', 'VND'))}")
+        if "stock" in item:
+            lines.append(f"Tồn kho: còn {item['stock']} sản phẩm")
+        if "description" in item:
+            lines.append(f"Mô tả: {item['description']}")
+        return "\n".join(lines)
+
+    # ---- Category (name + description + type) ----
+    if "name" in item and "description" in item and "type" in item:
+        t = "sách" if item["type"] == "book" else "thời trang"
+        return f"Danh mục {t}: {item['name']}. Mô tả: {item['description']}"
+
+    # ---- Behavior scenario (có behavior_type) ----
+    if "behavior_type" in item:
+        parts = [f"Nhóm hành vi khách hàng: {item.get('display_name', item['behavior_type'])}"]
+        if "characteristics" in item:
+            parts.append("Đặc điểm: " + "; ".join(item["characteristics"]))
+        strat = item.get("consultation_strategy", {})
+        if strat:
+            if "tone" in strat:
+                parts.append(f"Tone tư vấn: {strat['tone']}")
+            if "approach" in strat:
+                parts.append(f"Cách tiếp cận: {strat['approach']}")
+            if "key_phrases" in strat:
+                parts.append("Câu nói gợi ý: " + "; ".join(strat["key_phrases"]))
+            if "avoid" in strat:
+                parts.append(f"Cần tránh: {strat['avoid']}")
+        rec = item.get("recommended_products", {})
+        if rec:
+            if rec.get("books"):
+                parts.append("Sách gợi ý: " + "; ".join(rec["books"]))
+            if rec.get("clothes"):
+                parts.append("Thời trang gợi ý: " + "; ".join(rec["clothes"]))
+        return "\n".join(parts)
+
+    # ---- Fallback: keep as JSON ----
+    return json.dumps(item, ensure_ascii=False, indent=2)
+
 
 class Document:
     """Đại diện cho 1 đoạn văn bản đã chunk."""
@@ -66,7 +204,7 @@ class KnowledgeBaseBuilder:
         """Load tất cả files JSON và Markdown từ knowledge_base/."""
         documents = []
 
-        # Load JSON
+        # Load JSON — format thành natural text thay vì json.dumps
         for jf in glob.glob(os.path.join(kb_dir, "**/*.json"), recursive=True):
             try:
                 with open(jf, 'r', encoding='utf-8') as f:
@@ -75,12 +213,12 @@ class KnowledgeBaseBuilder:
                 if isinstance(data, list):
                     for item in data:
                         documents.append(Document(
-                            content=json.dumps(item, ensure_ascii=False, indent=2),
+                            content=_format_item(item, rel),
                             metadata={"source": rel, "type": "json"}
                         ))
                 elif isinstance(data, dict):
                     documents.append(Document(
-                        content=json.dumps(data, ensure_ascii=False, indent=2),
+                        content=_format_item(data, rel),
                         metadata={"source": rel, "type": "json"}
                     ))
             except Exception as e:
@@ -199,9 +337,12 @@ class KnowledgeBaseBuilder:
         """
         Hybrid search: FAISS + BM25 với Reciprocal Rank Fusion (RRF).
         alpha: trọng số cho vector search (1-alpha cho BM25).
+        Tự động mở rộng query với brand aliases (LV -> Louis Vuitton, ...).
         """
-        vec_results = self.search_vector(query, top_k=top_k * 2)
-        bm25_results = self.search_bm25(query, top_k=top_k * 2)
+        # Fix B: expand query với brand aliases trước khi search
+        expanded_query = expand_query(query)
+        vec_results = self.search_vector(expanded_query, top_k=top_k * 2)
+        bm25_results = self.search_bm25(expanded_query, top_k=top_k * 2)
 
         # RRF scoring
         rrf = {}

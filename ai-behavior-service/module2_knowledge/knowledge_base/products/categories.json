@@ -7,7 +7,6 @@
   {"id": 6, "name": "Tâm lý học", "description": "Tâm trí con người, hành vi và cảm xúc", "type": "book"},
   {"id": 7, "name": "Lịch sử - Địa lý", "description": "Lịch sử văn minh nhân loại, Việt Nam", "type": "book"},
   {"id": 8, "name": "Thiếu nhi", "description": "Sách giáo dục, giải trí cho trẻ em", "type": "book"},
-  {"id": 9, "name": "Thời Trang Nam", "description": "Quần áo thời trang dành cho nam giới", "type": "clothes"},
-  {"id": 10, "name": "Thời Trang Nữ", "description": "Quần áo thời trang dành cho nữ giới", "type": "clothes"},
-  {"id": 11, "name": "Thời Trang Hàng Hiệu", "description": "Đồ hiệu xa xỉ từ Gucci, Dior, Chanel, LV...", "type": "clothes"}
+  {"id": 11, "name": "Thời Trang Hàng Hiệu", "description": "Đồ hiệu xa xỉ từ Gucci, Dior, Chanel, LV, YSL, Hermes, Balenciaga, Versace, Prada, Burberry", "type": "clothes"}
 ]
+

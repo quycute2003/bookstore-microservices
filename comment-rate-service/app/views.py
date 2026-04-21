@@ -4,7 +4,7 @@ from .models import Review
 from .serializers import ReviewSerializer
 import requests
 
-BOOK_SERVICE_URL = "http://book-service:8000"
+BOOK_SERVICE_URL = "http://product-service:8000"
 
 class SubmitReview(APIView):
     def post(self, request):

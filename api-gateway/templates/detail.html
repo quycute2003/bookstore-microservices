@@ -595,7 +595,7 @@
 
     /* CHAT WIDGET */
     (function() {
-      const AI_API = 'http://localhost:8020';
+      const AI_API = '/api/ai-behavior';
       const API_KEY = 'bookstore-ai-secret-key-2024';
       const userId = localStorage.getItem('lumiere_uid') || ('user_' + Date.now());
       localStorage.setItem('lumiere_uid', userId);
@@ -673,7 +673,7 @@
       document.addEventListener('click', () => { if (profileIcon) profileIcon.classList.remove('profile-active'); });
     }
 
-    window.handleLogout = function() { localStorage.removeItem('access_token'); localStorage.removeItem('user_name'); window.location.href = '/auth/'; };
+    window.handleLogout = function() { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); localStorage.removeItem('user_name'); localStorage.removeItem('user_role'); localStorage.removeItem('lumiere_uid'); localStorage.removeItem('quystore_user'); document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax'; window.location.href = '/auth/'; };
 
     document.addEventListener('DOMContentLoaded', () => {
       updateCartBadge();

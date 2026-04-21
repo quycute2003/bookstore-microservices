@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"chat\\\\|chatbot\\\\|LUMIÈRE\\\\|Trợ\" /c/bookstore-microservice/api-gateway/templates/*.html)",
+      "Bash(python -c ':*)",
+      "Bash(python)",
+      "Bash(ls /c/bookstore-microservice/api-gateway/templates/*.html)",
+      "Bash(grep -l \"chat-bubble\\\\|Trợ Lý LUMIÈRE\" /c/bookstore-microservice/api-gateway/templates/*.html)",
+      "Bash(python -c \"import sentence_transformers; import faiss; import rank_bm25; print\\('all deps OK'\\)\")",
+      "Bash(where python:*)",
+      "Bash(py --version)",
+      "Bash(py -3.10 -c \"import sentence_transformers\")",
+      "Bash(py -3.11 -c \"import sentence_transformers\")",
+      "Bash(py -3.12 -c \"import sentence_transformers\")",
+      "Bash(py -3.11 -m module2_knowledge.kb_builder)",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONUTF8=1 py -3.11 -m module2_knowledge.kb_builder)",
+      "Bash(py -3.11 -c ':*)",
+      "Bash(xargs cat:*)",
+      "Bash(xargs grep:*)",
+      "Bash(sed -n '19,80p' c:/bookstore-microservice/api-gateway/api_gateway/views.py)",
+      "Bash(sed -n '457,530p' c:/bookstore-microservice/api-gateway/api_gateway/views.py)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -n \"logout\" c:/bookstore-microservice/api-gateway/templates/*.html)",
+      "Bash(docker-compose logs:*)",
+      "Bash(sed -i 's|BOOK_SERVICE_URL = \"http://book-service:8000\"|BOOK_SERVICE_URL = \"http://product-service:8000\"|g' c:/bookstore-microservice/order-service/app/views.py)",
+      "Bash(sed -i 's|\"http://clothes-service:8000/clothes/\"|\"http://product-service:8000/clothes/\"|g' c:/bookstore-microservice/order-service/app/views.py)",
+      "Bash(sed -i 's|BOOK_SERVICE_URL = \"http://book-service:8000\"|BOOK_SERVICE_URL = \"http://product-service:8000\"|g' c:/bookstore-microservice/comment-rate-service/app/views.py)",
+      "Bash(sed -i 's|BOOK_SERVICE_URL = \"http://book-service:8000\"|BOOK_SERVICE_URL = \"http://product-service:8000\"|g' c:/bookstore-microservice/recommender-ai-service/app/views.py)"
+    ],
+    "additionalDirectories": [
+      "c:\\bookstore-microservice\\user-service\\config"
+    ]
+  }
+}

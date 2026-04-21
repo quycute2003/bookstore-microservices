@@ -21,11 +21,105 @@ def auth_view(request):
 
 # 3. Trang chủ (Book List & AI)
 import random
+import time as _time
+
+# ── AI Behavior ────────────────────────────────────────────────
+AI_BEHAVIOR_URL = "http://ai-behavior-service:8020"
+AI_BEHAVIOR_KEY = "bookstore-ai-secret-key-2024"
+
+_BEHAVIOR_REASONS = {
+    'impulse_buyer':   'Gợi ý hot dành riêng cho bạn!',
+    'researcher':      'Sách bạn có thể muốn đọc tiếp',
+    'loyal_customer':  'Dành riêng cho khách hàng thân thiết',
+    'price_sensitive': 'Giá tốt nhất hôm nay cho bạn',
+    'window_shopper':  'Khám phá điều mới hôm nay',
+    'brand_loyal':     'Thương hiệu bạn yêu thích',
+    'deal_hunter':     'Ưu đãi không thể bỏ lỡ',
+    'gift_buyer':      'Quà tặng cao cấp cho người thân',
+}
+
+
+def _update_behavior(request, action, product=None):
+    b = request.session.get('behavior', {
+        'click_count': 0, 'view_count': 0, 'purchase_count': 0,
+        'time_on_page': 0.0, 'cart_add_count': 0, 'search_count': 0,
+        'session_duration': 0.0, 'avg_price_viewed': 0.0,
+        'category_diversity': 0.0, 'return_rate': 0.0,
+        '_prices': [], '_cats': [], '_start': _time.time(),
+    })
+    b['session_duration'] = (_time.time() - b.get('_start', _time.time())) / 60.0
+
+    if action == 'view' and product:
+        b['view_count'] += 1
+        b['click_count'] += 1
+        price = float(product.get('price', 0) or 0)
+        if price > 0:
+            b['_prices'].append(price)
+            b['avg_price_viewed'] = sum(b['_prices']) / len(b['_prices'])
+        cat = str(product.get('category_id') or product.get('type', ''))
+        if cat and cat not in b['_cats']:
+            b['_cats'].append(cat)
+        b['category_diversity'] = min(1.0, len(b['_cats']) / 8.0)
+        ptype = str(product.get('product_type') or product.get('type', ''))
+        if ptype:
+            vt = b.get('_viewed_types', [])
+            if ptype in vt:
+                vt.remove(ptype)
+            vt.append(ptype)          # move to end = most recent
+            b['_viewed_types'] = vt[-10:]
+    elif action == 'search':
+        b['search_count'] += 1
+    elif action == 'cart_add':
+        b['cart_add_count'] += 1
+    elif action == 'purchase':
+        b['purchase_count'] += 1
+
+    request.session['behavior'] = b
+    request.session.modified = True
+
+
+def _get_behavior_label(request):
+    b = request.session.get('behavior', {})
+    if b.get('view_count', 0) + b.get('search_count', 0) < 2:
+        return request.session.get('behavior_label')
+    payload = {k: v for k, v in b.items() if not k.startswith('_')}
+    try:
+        uid = f"sess_{request.session.session_key or 'anon'}"
+        res = requests.post(
+            f"{AI_BEHAVIOR_URL}/analyze-behavior",
+            json={"user_id": uid, "sessions": [payload]},
+            headers={"X-API-Key": AI_BEHAVIOR_KEY},
+            timeout=2,
+        )
+        if res.status_code == 200:
+            label = res.json().get('behavior_profile', {}).get('label')
+            request.session['behavior_label'] = label
+            request.session.modified = True
+            return label
+    except Exception:
+        pass
+    return request.session.get('behavior_label')
+
+
+def _sort_by_behavior(products, label):
+    p = list(products)
+    if label in ('price_sensitive', 'deal_hunter'):
+        p.sort(key=lambda x: float(x.get('price', 0) or 0))
+    elif label == 'researcher':
+        p.sort(key=lambda x: 0 if x.get('type') == 'book' else 1)
+    elif label == 'gift_buyer':
+        p.sort(key=lambda x: -float(x.get('price', 0) or 0))
+    elif label == 'brand_loyal':
+        p.sort(key=lambda x: (x.get('attributes', {}).get('brand', ''), x.get('type', '')))
+    else:
+        random.shuffle(p)
+    return p
+
 
 def home(request):
     # 1. Gọi Book Service lấy kho sách
     try:
-        res = requests.get("http://book-service:8000/books/")
+        res = requests.get("http://product-service:8000/books/")
         books = res.json() if res.status_code == 200 else []
         
         # 🔥 THÊM ĐOẠN NÀY: Gắn tiền tố cho toàn bộ sách để Frontend render link chuẩn
@@ -86,44 +180,68 @@ def home(request):
         'max_price': max_price,
     })
 # 3. Trang Chi tiết Sản phẩm & Review
+_ALL_PRODUCT_TYPES = [
+    'book', 'cloth', 'stationery', 'electronics', 'toy',
+    'cosmetic', 'bag', 'shoe', 'watch', 'gift',
+]
+
 def product_detail(request, product_id):
     product = None
-    product_type = None
     real_id = product_id
+    product_type = None
 
-    # Parse prefix: book_1 → type='book', id='1' | cloth_3 → type='cloth', id='3'
-    if product_id.startswith('book_'):
-        product_type = 'book'
-        real_id = product_id.replace('book_', '')
-    elif product_id.startswith('cloth_'):
-        product_type = 'cloth'
-        real_id = product_id.replace('cloth_', '')
+    # Parse "{type}_{id}" for all known types
+    for ptype in _ALL_PRODUCT_TYPES:
+        prefix = f"{ptype}_"
+        if product_id.startswith(prefix):
+            product_type = ptype
+            real_id = product_id[len(prefix):]
+            break
 
-    # Tìm trong Books
-    if product_type in (None, 'book'):
+    # Map type → product-service endpoint slug
+    _endpoint = {
+        'book': 'books', 'cloth': 'clothes',
+        'stationery': 'stationery', 'electronics': 'electronics',
+        'toy': 'toy', 'cosmetic': 'cosmetic', 'bag': 'bag',
+        'shoe': 'shoe', 'watch': 'watch', 'gift': 'gift',
+    }
+
+    if product_type:
+        slug = _endpoint.get(product_type, product_type)
         try:
-            book_res = requests.get(f"http://book-service:8000/books/{real_id}/")
-            if book_res.status_code == 200:
-                product = book_res.json()
-                product['type'] = 'book'
-                try:
-                    cat_res = requests.get(f"http://catalog-service:8000/categories/{product.get('category_id')}/")
-                    if cat_res.status_code == 200:
-                        product['category_name'] = cat_res.json().get('name')
-                except:
-                    pass
-        except: pass
+            res = requests.get(f"http://product-service:8000/{slug}/{real_id}/")
+            if res.status_code == 200:
+                product = res.json()
+                product['type'] = product_type
+                # Normalize fields so detail.html có đủ title/author
+                product.setdefault('title', product.get('name', ''))
+                attrs = product.get('attributes') or {}
+                product.setdefault('author', attrs.get('brand', ''))
+                if product_type == 'book':
+                    try:
+                        cat_res = requests.get(
+                            f"http://catalog-service:8000/categories/{product.get('category_id')}/")
+                        if cat_res.status_code == 200:
+                            product['category_name'] = cat_res.json().get('name')
+                    except Exception:
+                        pass
+                else:
+                    product.setdefault('category_name', attrs.get('brand', product_type.title()))
+        except Exception:
+            pass
 
-    # Tìm trong Clothes
-    if not product and product_type in (None, 'cloth'):
-        try:
-            cloth_res = requests.get(f"http://clothes-service:8000/clothes/{real_id}/")
-            if cloth_res.status_code == 200:
-                product = cloth_res.json()
-                product['type'] = 'cloth'
-                product['title'] = product.get('name')
-                product['author'] = product.get('brand')
-        except: pass
+    # Fallback: thử tất cả endpoints nếu không parse được type
+    if not product:
+        for ptype, slug in _endpoint.items():
+            try:
+                res = requests.get(f"http://product-service:8000/{slug}/{real_id}/")
+                if res.status_code == 200:
+                    product = res.json()
+                    product['type'] = ptype
+                    product.setdefault('title', product.get('name', ''))
+                    break
+            except Exception:
+                continue
 
     # Lấy Reviews
     try:
@@ -133,60 +251,71 @@ def product_detail(request, product_id):
     except Exception:
         reviews = []
 
+    if product:
+        _update_behavior(request, 'view', product)
+
     return render(request, 'detail.html', {'product': product, 'reviews': reviews})
 
 # Trang danh sách sản phẩm
+TYPE_LABELS = {
+    'book': 'Sách', 'cloth': 'Thời trang', 'stationery': 'Văn phòng phẩm',
+    'electronics': 'Điện tử', 'toy': 'Đồ chơi', 'cosmetic': 'Mỹ phẩm',
+    'bag': 'Túi xách', 'shoe': 'Giày dép', 'watch': 'Đồng hồ', 'gift': 'Quà tặng',
+}
+
 def listing_view(request):
     products = []
-    brands = set()
     categories = []
 
-    # Danh mục sách
+    # Fetch categories từ catalog-service
     try:
         cat_res = requests.get("http://catalog-service:8000/categories/")
         if cat_res.status_code == 200:
             categories = cat_res.json()
-    except Exception: pass
-    
+    except Exception:
+        pass
     cat_dict = {str(c['id']): c['name'] for c in categories}
 
-    # Fetch books
+    # Fetch TẤT CẢ sản phẩm qua unified endpoint /products/
     try:
-        book_res = requests.get("http://book-service:8000/books/")
-        if book_res.status_code == 200:
-            books = book_res.json()
-            for b in books:
-                b['type'] = 'book'
-                b['product_id'] = f"book_{b['id']}"
-                b['category_name'] = cat_dict.get(str(b.get('category_id')), "Sách Khảo Cứu")
-                products.append(b)
-    except: pass
+        res = requests.get("http://product-service:8000/products/")
+        if res.status_code == 200:
+            for p in res.json():
+                ptype = p.get('product_type', 'other')
+                attrs = p.get('attributes') or {}
+                p['type']          = ptype
+                p['type_label']    = TYPE_LABELS.get(ptype, ptype.title())
+                p['product_id']    = f"{ptype}_{p['id']}"
+                p['title']         = p.get('name', '')
+                # category_name: sách dùng catalog, còn lại dùng brand nếu có
+                p['category_name'] = (
+                    cat_dict.get(str(p.get('category_id')))
+                    or attrs.get('brand')
+                    or TYPE_LABELS.get(ptype, ptype.title())
+                )
+                products.append(p)
+    except Exception:
+        pass
 
-    # Fetch clothes
-    try:
-        cloth_res = requests.get("http://clothes-service:8000/clothes/")
-        if cloth_res.status_code == 200:
-            clothes = cloth_res.json()
-            for c in clothes:
-                c['type'] = 'cloth'
-                c['product_id'] = f"cloth_{c['id']}"
-                c['title'] = c.get('name')
-                brand = c.get('brand', 'Khác')
-                c['category_name'] = brand
-                brands.add(brand)
-                products.append(c)
-    except: pass
-    
-    # Shuffle the products slightly for a mixed look
-    import random
-    random.shuffle(products)
+    label = _get_behavior_label(request)
+    products = _sort_by_behavior(products, label)
 
-    context = {
-        'products_json': json.dumps(products),
-        'categories': categories,
-        'brands': list(brands)
-    }
-    return render(request, 'listing.html', context)
+    # Tập hợp loại và brand cho sidebar filter
+    product_types = sorted({p['type'] for p in products})
+    brands = sorted({
+        p.get('attributes', {}).get('brand', '')
+        for p in products
+        if p.get('attributes', {}).get('brand')
+    })
+
+    return render(request, 'listing.html', {
+        'products_json':    json.dumps(products),
+        'categories':       [c for c in categories if c.get('type') == 'book'],
+        'brands':           brands,
+        'product_types':    [(t, TYPE_LABELS.get(t, t.title())) for t in product_types],
+        'behavior_label':   label or '',
+        'behavior_reason':  _BEHAVIOR_REASONS.get(label, ''),
+    })
 
 # 4. Trang Giỏ hàng
 # 4. Trang Giỏ hàng
@@ -205,14 +334,14 @@ def cart_view(request):
 
     # 2. Gọi Book/Clothes Service để lấy Tên và Ảnh
     try:
-        book_res = requests.get("http://book-service:8000/books/")
+        book_res = requests.get("http://product-service:8000/books/")
         books = book_res.json() if book_res.status_code == 200 else []
         book_dict = {str(b['id']): b for b in books}
     except Exception:
         book_dict = {}
 
     try:
-        clothes_res = requests.get("http://clothes-service:8000/clothes/")
+        clothes_res = requests.get("http://product-service:8000/clothes/")
         clothes = clothes_res.json() if clothes_res.status_code == 200 else []
         clothes_dict = {str(c['id']): c for c in clothes}
     except Exception:
@@ -259,22 +388,9 @@ def cart_view(request):
         'total_price': round(total_price, 2)
     })
 
-# 5. Trang Chốt đơn
-def checkout_view(request):
-    return render(request, 'checkout.html')
-
-# 6. Lịch sử Đơn hàng
-def orders_view(request):
-    return render(request, 'orders.html')
-
-
 # ==========================================
 # KHU VỰC 2: BACK-OFFICE (BAN QUẢN TRỊ)
 # ==========================================
-
-# 7. Quản lý kho (Staff)
-def staff_dashboard(request):
-    return render(request, 'staff_dashboard.html')
 
 # 8. Báo cáo doanh thu (Manager)
 def manager_dashboard(request):
@@ -323,16 +439,25 @@ import requests
 @csrf_exempt
 def universal_proxy(request, service_name, path):
     directory = {
-        'cart': 'http://cart-service:8000',
-        'book': 'http://book-service:8000',
-        'clothes': 'http://clothes-service:8000',
+        # User services (gộp customer + staff + manager → user-service DDD)
+        'customer': 'http://user-service:8000',
+        'staff':    'http://user-service:8000',
+        'admin':    'http://user-service:8000',
+        # Cart / Order / Pay / Ship
+        'cart':  'http://cart-service:8000',
         'order': 'http://order-service:8000',
-        'pay': 'http://pay-service:8000',
-        'ship': 'http://ship-service:8000',
-        'ai': 'http://recommender-ai-service:8000',
+        'pay':   'http://pay-service:8000',
+        'ship':  'http://ship-service:8000',
+        # Product (book/clothes backward-compat → product-service DDD)
+        'book':    'http://product-service:8000',
+        'clothes': 'http://product-service:8000',
+        'product': 'http://product-service:8000',
+        # Other services
         'catalog': 'http://catalog-service:8000',
         'comment': 'http://comment-rate-service:8000',
-        'auth': 'http://auth-service:8000',
+        'ai':      'http://recommender-ai-service:8000',
+        'auth':    'http://auth-service:8000',
+        'ai-behavior': 'http://ai-behavior-service:8020',
     }
 
     # 2. Kiểm tra xem Frontend có gọi đúng nhà không
@@ -351,6 +476,8 @@ def universal_proxy(request, service_name, path):
 
     # Forward headers (bỏ qua Host và Content-Length rác để tránh lỗi treo mạng)
     headers = {key: value for key, value in request.headers.items() if key.lower() not in ['host', 'content-length']}
+    if service_name == 'ai-behavior':
+        headers['X-API-Key'] = AI_BEHAVIOR_KEY
     if hasattr(request, 'user_id'):
         headers['X-User-Id'] = str(request.user_id)
     if hasattr(request, 'user_role'):
@@ -392,7 +519,7 @@ def checkout_view(request):
     except: pass
 
     try:
-        book_res = requests.get("http://book-service:8000/books/")
+        book_res = requests.get("http://product-service:8000/books/")
         books = book_res.json() if book_res.status_code == 200 else []
         book_dict = {str(b['id']): b for b in books}
     except: book_dict = {}
@@ -449,6 +576,17 @@ def login_view(request):
     # Chỉ đơn giản là ném giao diện Login ra cho người dùng
     return render(request, 'login.html')
 
+@csrf_exempt
+def logout_view(request):
+    """
+    Server-side logout: xóa cookie access_token.
+    Client-side JS cũng tự clear localStorage, nhưng view này
+    đảm bảo cookie bị expire ngay cả khi JS bị chặn.
+    """
+    response = JsonResponse({"message": "Đã đăng xuất thành công"})
+    response.delete_cookie('access_token', path='/')
+    return response
+
 def staff_dashboard(request):
     # 1. Gom danh sách Đơn hàng từ nhà Order
     try:
@@ -461,7 +599,7 @@ def staff_dashboard(request):
 
     # 2. Gom danh sách Kho sách từ nhà Book
     try:
-        book_res = requests.get("http://book-service:8000/books/")
+        book_res = requests.get("http://product-service:8000/books/")
         books = book_res.json() if book_res.status_code == 200 else []
         books.reverse()
     except Exception as e:
@@ -470,7 +608,7 @@ def staff_dashboard(request):
 
     # Gom danh sách Quần áo từ nhà Clothes
     try:
-        clothes_res = requests.get("http://clothes-service:8000/clothes/")
+        clothes_res = requests.get("http://product-service:8000/clothes/")
         clothes = clothes_res.json() if clothes_res.status_code == 200 else []
         clothes.reverse()
     except Exception as e:
@@ -500,4 +638,59 @@ def staff_dashboard(request):
         'total_revenue': total_revenue,
         'low_stock_total': low_stock_total,
         'total_items': total_items,
+    })
+
+
+# ─────────────────────────────────────────────────────────────
+# BEHAVIOR TRACKING & PERSONALIZED RECOMMENDATIONS
+# ─────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def track_behavior(request):
+    """POST {action, product?} — cập nhật session behavior từ frontend."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+    try:
+        data = json.loads(request.body)
+        action = data.get('action', 'view')
+        product = data.get('product')
+        _update_behavior(request, action, product)
+        label = _get_behavior_label(request)
+        return JsonResponse({'ok': True, 'label': label})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+def recommendations_view(request):
+    """GET — trả về 4 sản phẩm cá nhân hóa theo behavior + viewed types."""
+    label = _get_behavior_label(request)
+    b = request.session.get('behavior', {})
+    viewed_types = b.get('_viewed_types', [])   # most recent last
+
+    try:
+        res = requests.get("http://product-service:8000/products/", timeout=3)
+        all_products = res.json() if res.status_code == 200 else []
+    except Exception:
+        all_products = []
+
+    for p in all_products:
+        ptype = p.get('product_type', 'other')
+        p['type'] = ptype
+        p['type_label'] = TYPE_LABELS.get(ptype, ptype.title())
+        p['product_id'] = f"{ptype}_{p['id']}"
+        p['title'] = p.get('name', '')
+
+    if viewed_types:
+        # Boost: ưu tiên loại sản phẩm user đã xem gần nhất
+        recent = set(viewed_types[-3:])
+        primary   = _sort_by_behavior([p for p in all_products if p.get('type') in recent], label)
+        secondary = _sort_by_behavior([p for p in all_products if p.get('type') not in recent], label)
+        sorted_products = primary + secondary
+    else:
+        sorted_products = _sort_by_behavior(all_products, label)
+
+    return JsonResponse({
+        'products': sorted_products[:4],
+        'label': label,
+        'reason': _BEHAVIOR_REASONS.get(label, 'Gợi ý hôm nay dành riêng cho bạn!'),
     })

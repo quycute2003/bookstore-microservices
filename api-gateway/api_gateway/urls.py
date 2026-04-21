@@ -15,8 +15,11 @@ urlpatterns = [
     path('cart/', views.cart_view, name='cart'),                       # http://localhost:8000/cart/
     path('checkout/', views.checkout_view, name='checkout'),           # http://localhost:8000/checkout/
     path('orders/', views.orders_view, name='orders'),       
-    # Đường dẫn trang Đăng nhập
-    path('login/', views.login_view),          # http://localhost:8000/orders/
+    # Đường dẫn trang Đăng nhập / Đăng xuất
+    path('login/', views.login_view),
+    path('logout/', views.logout_view, name='logout'),
+    path('track/', views.track_behavior, name='track_behavior'),
+    path('recommendations/', views.recommendations_view, name='recommendations'),
     
     # --- Định tuyến Ban quản trị ---
     path('staff/', views.staff_dashboard, name='staff_dashboard'),     # http://localhost:8000/staff/

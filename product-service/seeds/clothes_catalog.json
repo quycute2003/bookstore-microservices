@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1, "name": "Gucci Vintage Logo T-Shirt", "brand": "Gucci",
+    "size": "M", "color": "White", "price": 13750000, "currency": "VND",
+    "stock": 15, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo thun Gucci với logo vintage cổ điển. Chất liệu cotton cao cấp 100%, mềm mại và thoáng khí. Phù hợp phong cách casual sang trọng."
+  },
+  {
+    "id": 2, "name": "Christian Dior Oblique Jacket", "brand": "Dior",
+    "size": "L", "color": "Navy Blue", "price": 70000000, "currency": "VND",
+    "stock": 5, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo khoác Dior với họa tiết Oblique signature. Chất liệu twill kỹ thuật, thiết kế slim-fit. Biểu tượng thời trang cao cấp Pháp."
+  },
+  {
+    "id": 3, "name": "Louis Vuitton Monogram Denim Jacket", "brand": "Louis Vuitton",
+    "size": "L", "color": "Blue", "price": 77500000, "currency": "VND",
+    "stock": 3, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo khoác denim LV với monogram nổi bật. Denim Nhật Bản cao cấp, wash thủ công. Limited edition, số lượng cực hiếm."
+  },
+  {
+    "id": 4, "name": "Chanel Classic Tweed Coat", "brand": "Chanel",
+    "size": "S", "color": "Black/White", "price": 162500000, "currency": "VND",
+    "stock": 2, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo khoác tweed Chanel kinh điển. Chất liệu tweed dệt thủ công từ xưởng Lesage, nút bọc logo CC. Biểu tượng thời trang vượt thời gian."
+  },
+  {
+    "id": 5, "name": "Balenciaga Oversized Hoodie", "brand": "Balenciaga",
+    "size": "XL", "color": "Black", "price": 23750000, "currency": "VND",
+    "stock": 20, "category": "Thời Trang Hàng Hiệu",
+    "description": "Hoodie oversized Balenciaga phong cách streetwear luxury. Cotton fleece 450gsm, logo thêu nổi. Xu hướng high-fashion meets street."
+  },
+  {
+    "id": 6, "name": "Prada Re-Nylon Shirt", "brand": "Prada",
+    "size": "M", "color": "Black", "price": 30000000, "currency": "VND",
+    "stock": 10, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo sơ mi Prada dòng Re-Nylon bền vững. Chất liệu nylon tái chế từ rác thải đại dương. Thời trang kết hợp trách nhiệm môi trường."
+  },
+  {
+    "id": 7, "name": "Versace Silk Barocco Shirt", "brand": "Versace",
+    "size": "M", "color": "Gold/Black", "price": 36250000, "currency": "VND",
+    "stock": 8, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo sơ mi lụa Versace họa tiết Barocco đặc trưng. 100% lụa Ý, in kỹ thuật số. Phong cách baroque xa hoa mang đậm DNA Versace."
+  },
+  {
+    "id": 8, "name": "Hermes Cashmere Sweater", "brand": "Hermes",
+    "size": "L", "color": "Camel", "price": 55000000, "currency": "VND",
+    "stock": 6, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo len cashmere Hermes màu camel thanh lịch. Cashmere Mông Cổ loại 1, dệt kim 12 gauge. Sự tinh tế trong từng đường kim mũi chỉ."
+  },
+  {
+    "id": 9, "name": "Burberry Classic Trench Coat", "brand": "Burberry",
+    "size": "M", "color": "Beige", "price": 60000000, "currency": "VND",
+    "stock": 12, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo trench coat Burberry kinh điển. Chất liệu gabardine chống nước, lót kẻ Nova Check signature. Heritage piece từ 1856."
+  },
+  {
+    "id": 10, "name": "YSL Leather Biker Jacket", "brand": "Yves Saint Laurent",
+    "size": "S", "color": "Black", "price": 122500000, "currency": "VND",
+    "stock": 2, "category": "Thời Trang Hàng Hiệu",
+    "description": "Áo khoác da biker YSL huyền thoại. Da cừu Ý mềm mại, khóa bạc YSL. Biểu tượng rock & roll chic từ thời Hedi Slimane."
+  }
+]

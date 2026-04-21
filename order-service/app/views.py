@@ -7,7 +7,7 @@ from .rabbitmq_utils import publish_message
 import requests
 
 CART_SERVICE_URL = "http://cart-service:8000"
-BOOK_SERVICE_URL = "http://book-service:8000"
+BOOK_SERVICE_URL = "http://product-service:8000"
 PAY_SERVICE_URL = "http://pay-service:8000"
 SHIP_SERVICE_URL = "http://ship-service:8000"
 
@@ -61,7 +61,7 @@ class CreateOrder(APIView):
             books = {}
             
         try:
-            clothes_res = requests.get("http://clothes-service:8000/clothes/")
+            clothes_res = requests.get("http://product-service:8000/clothes/")
             clothes = {str(c['id']): c for c in clothes_res.json()}
         except:
             clothes = {}
