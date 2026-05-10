@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pay-worker
+  labels:
+    app: pay-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pay-worker
+  template:
+    metadata:
+      labels:
+        app: pay-worker
+    spec:
+      initContainers:
+      - name: wait-for-postgres-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z postgres-db 5432; do echo waiting for postgres-db; sleep 2; done']
+      - name: wait-for-rabbitmq
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done']
+      containers:
+      - name: pay-worker
+        image: dunguyenquy/pay-service:latest
+        imagePullPolicy: Always
+        command: ["python", "manage.py", "run_consumer"]
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "30m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

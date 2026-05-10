@@ -8,24 +8,30 @@ Graph Schema — Định nghĩa các loại Node và Edge trong Knowledge Graph.
 class NodeType:
     BOOK      = "Book"
     CLOTHES   = "Clothes"
+    PRODUCT   = "Product"   # generic — electronics, furniture, etc.
     AUTHOR    = "Author"
     BRAND     = "Brand"
     CATEGORY  = "Category"
     SCENARIO  = "Scenario"
+    USER      = "User"      # e-commerce user node
 
 
 # =============================================
 # EDGE TYPES
 # =============================================
 class EdgeType:
-    WRITTEN_BY   = "WRITTEN_BY"    # Book -> Author
-    IN_CATEGORY  = "IN_CATEGORY"   # Book/Clothes -> Category
-    MADE_BY      = "MADE_BY"       # Clothes -> Brand
-    SUITS        = "SUITS"         # Category -> Scenario
-    ALIAS        = "ALIAS"         # Brand -> Brand (LV <-> Louis Vuitton)
-    SAME_AUTHOR  = "SAME_AUTHOR"   # Book -> Book (cùng tác giả)
-    SAME_BRAND   = "SAME_BRAND"    # Clothes -> Clothes (cùng hãng)
-    SIMILAR      = "SIMILAR"       # Product -> Product (cùng category)
+    WRITTEN_BY      = "WRITTEN_BY"      # Book -> Author
+    IN_CATEGORY     = "IN_CATEGORY"     # Book/Clothes -> Category
+    MADE_BY         = "MADE_BY"         # Clothes -> Brand
+    SUITS           = "SUITS"           # Category -> Scenario
+    ALIAS           = "ALIAS"           # Brand -> Brand (LV <-> Louis Vuitton)
+    SAME_AUTHOR     = "SAME_AUTHOR"     # Book -> Book (cùng tác giả)
+    SAME_BRAND      = "SAME_BRAND"      # Clothes -> Clothes (cùng hãng)
+    SIMILAR         = "SIMILAR"         # Product -> Product (cùng category)
+    # User interaction edges (weight = interaction strength)
+    VIEWED          = "VIEWED"          # User -> Product  (weight=1)
+    ADDED_TO_CART   = "ADDED_TO_CART"   # User -> Product  (weight=3)
+    PURCHASED       = "PURCHASED"       # User -> Product  (weight=5)
 
 
 # =============================================

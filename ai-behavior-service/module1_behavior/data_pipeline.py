@@ -435,8 +435,18 @@ class AugmentedBehaviorDataset(Dataset):
 
 
 def create_dataloaders(num_users_per_class=63, batch_size=32, test_ratio=0.2,
-                       seed=42, augment=True):
-    """Tạo DataLoader với augmentation cho training, không augment cho test."""
+                       seed=42, augment=True,
+                       save_event_logs=True,
+                       event_log_path='data/data_user500.csv'):
+    """
+    Tạo DataLoader cho training (BiLSTM/LSTM/RNN).
+
+    Training data: BehaviorDataGenerator (temporal patterns phong phú).
+    Side-effect  : nếu save_event_logs=True, cũng sinh event-level CSV
+                   bằng generate_data.py để minh hoạ pipeline 2 bước
+                   (format yêu cầu của đề tài).
+    """
+    # ── BƯỚC CHÍNH: sinh session features cho training ──────────
     generator = BehaviorDataGenerator(num_users_per_class=num_users_per_class, seed=seed)
     X, y = generator.generate()
 
@@ -463,6 +473,16 @@ def create_dataloaders(num_users_per_class=63, batch_size=32, test_ratio=0.2,
     print(f"   Shape: ({NUM_SESSIONS} sessions, {NUM_FEATURES} features)")
     for k, v in BEHAVIOR_LABELS.items():
         print(f"   {k}: {v} — train={(y_train==k).sum()}, test={(y_test==k).sum()}")
+
+    # ── SIDE-EFFECT: sinh event-level CSV (format thầy yêu cầu) ─
+    if save_event_logs:
+        try:
+            from module1_behavior.generate_data import generate_dataset
+            n_users = num_users_per_class * len(BEHAVIOR_LABELS)
+            generate_dataset(n_users=n_users, output_path=event_log_path)
+            print(f"📄 Event-level logs → {event_log_path} ({n_users} users)")
+        except Exception as e:
+            print(f"⚠️  Không sinh được event-level logs: {e}")
 
     return train_loader, test_loader, train_ds.scaler
 

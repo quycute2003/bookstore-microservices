@@ -1,4 +1,21 @@
 services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+      - auth-service
+      - user-service
+      - product-service
+      - cart-service
+      - order-service
+      - pay-service
+      - ship-service
+      - catalog-service
+      - ai-behavior-service
+    restart: always
+
   postgres-db:
     image: postgres:15-alpine
     environment:
@@ -19,8 +36,8 @@ services:
 
   api-gateway:
     build: ./api-gateway
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - ./api-gateway:/app
     depends_on:
@@ -29,8 +46,8 @@ services:
 
   auth-service:
     build: ./auth-service
-    ports:
-      - "8012:8000"
+    expose:
+      - "8000"
     volumes:
       - ./auth-service:/app
     depends_on:
@@ -39,8 +56,8 @@ services:
 
   user-service:
     build: ./user-service
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
     volumes:
       - ./user-service:/app
     depends_on:
@@ -55,8 +72,8 @@ services:
 
   cart-service:
     build: ./cart-service
-    ports:
-      - "8003:8000"
+    expose:
+      - "8000"
     volumes:
       - ./cart-service:/app
     depends_on:
@@ -67,8 +84,8 @@ services:
 
   catalog-service:
     build: ./catalog-service
-    ports:
-      - "8006:8000"
+    expose:
+      - "8000"
     volumes:
       - ./catalog-service:/app
     depends_on:
@@ -77,8 +94,8 @@ services:
 
   order-service:
     build: ./order-service
-    ports:
-      - "8007:8000"
+    expose:
+      - "8000"
     volumes:
       - ./order-service:/app
     depends_on:
@@ -87,8 +104,8 @@ services:
 
   ship-service:
     build: ./ship-service
-    ports:
-      - "8008:8000"
+    expose:
+      - "8000"
     volumes:
       - ./ship-service:/app
     depends_on:
@@ -97,8 +114,8 @@ services:
 
   pay-service:
     build: ./pay-service
-    ports:
-      - "8009:8000"
+    expose:
+      - "8000"
     volumes:
       - ./pay-service:/app
     depends_on:
@@ -142,8 +159,8 @@ services:
 
   comment-rate-service:
     build: ./comment-rate-service
-    ports:
-      - "8010:8000"
+    expose:
+      - "8000"
     volumes:
       - ./comment-rate-service:/app
     depends_on:
@@ -152,8 +169,8 @@ services:
 
   recommender-ai-service:
     build: ./recommender-ai-service
-    ports:
-      - "8011:8000"
+    expose:
+      - "8000"
     volumes:
       - ./recommender-ai-service:/app
     depends_on:
@@ -208,8 +225,8 @@ services:
   ai-behavior-service:
     build: ./ai-behavior-service
     env_file: ./ai-behavior-service/.env
-    ports:
-      - "8020:8020"
+    expose:
+      - "8020"
     volumes:
       - ./ai-behavior-service:/app
       - ai_models:/app/models
@@ -230,8 +247,8 @@ services:
 
   product-service:
     build: ./product-service
-    ports:
-      - "8040:8000"
+    expose:
+      - "8000"
     volumes:
       - ./product-service:/app
     depends_on:
@@ -244,7 +261,72 @@ services:
       - POSTGRES_HOST=postgres-db
       - POSTGRES_PORT=5432
 
+  # ==========================================
+  # KHU VỰC 4: MONITORING & LOGGING (Chỉ chạy khi có cờ --profile monitoring)
+  # Chức năng: Prometheus lấy dữ liệu, Grafana vẽ biểu đồ, ELK lưu log.
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:10.0.3
+    profiles: ["monitoring"]
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    profiles: ["monitoring"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    profiles: ["monitoring"]
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    profiles: ["monitoring"]
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
 volumes:
   postgres_data:
   ai_models:
   neo4j_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:

@@ -536,8 +536,9 @@
       
       const pathParts = window.location.pathname.split('/').filter(Boolean);
       const productId = pathParts[pathParts.length - 1]; // e.g. book_1 or cloth_2
-      const itemType = productId.includes('cloth_') ? 'cloth' : 'book';
-      const actualId = productId.replace("book_","").replace("cloth_","");
+      const sep = productId.indexOf('_');
+      const itemType = sep > -1 ? productId.slice(0, sep) : 'book';
+      const actualId = sep > -1 ? productId.slice(sep + 1) : productId;
 
       try {
         const res = await fetch('/api/cart/cart-items/', {

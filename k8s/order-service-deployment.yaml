@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      initContainers:
+      - name: wait-for-postgres-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z postgres-db 5432; do echo waiting for postgres-db; sleep 2; done']
+      - name: wait-for-rabbitmq
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done']
+      containers:
+      - name: order-service
+        image: dunguyenquy/order-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 6
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "30m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"

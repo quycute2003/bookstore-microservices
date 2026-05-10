@@ -1,6 +1,6 @@
 from django.shortcuts import render
 import requests
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 # ==========================================
@@ -78,13 +78,25 @@ def _update_behavior(request, action, product=None):
     request.session.modified = True
 
 
+def _get_user_id(request) -> str:
+    """
+    Trả về user_id ổn định cho graph:
+    - Nếu đã login → dùng user_id từ JWT (ví dụ: "42")
+    - Nếu chưa login → dùng session key (ví dụ: "sess_abc123")
+    """
+    uid = getattr(request, 'user_id', None)
+    if uid:
+        return f"user_{uid}"
+    return f"sess_{request.session.session_key or 'anon'}"
+
+
 def _get_behavior_label(request):
     b = request.session.get('behavior', {})
     if b.get('view_count', 0) + b.get('search_count', 0) < 2:
         return request.session.get('behavior_label')
     payload = {k: v for k, v in b.items() if not k.startswith('_')}
     try:
-        uid = f"sess_{request.session.session_key or 'anon'}"
+        uid = _get_user_id(request)
         res = requests.post(
             f"{AI_BEHAVIOR_URL}/analyze-behavior",
             json={"user_id": uid, "sessions": [payload]},
@@ -332,34 +344,38 @@ def cart_view(request):
         print("Lỗi đứt cáp Cart Service:", e)
         my_cart_items = []
 
-    # 2. Gọi Book/Clothes Service để lấy Tên và Ảnh
+    # 2. Fetch toàn bộ sản phẩm một lần duy nhất (tất cả loại)
+    product_dict = {}
     try:
-        book_res = requests.get("http://product-service:8000/books/")
-        books = book_res.json() if book_res.status_code == 200 else []
-        book_dict = {str(b['id']): b for b in books}
+        all_res = requests.get("http://product-service:8000/products/", timeout=3)
+        all_products = all_res.json() if all_res.status_code == 200 else []
+        product_dict = {str(p['id']): p for p in all_products}
     except Exception:
-        book_dict = {}
+        pass
 
-    try:
-        clothes_res = requests.get("http://product-service:8000/clothes/")
-        clothes = clothes_res.json() if clothes_res.status_code == 200 else []
-        clothes_dict = {str(c['id']): c for c in clothes}
-    except Exception:
-        clothes_dict = {}
+    # Fallback: nếu /products/ trống thì thử /books/ + /clothes/
+    if not product_dict:
+        try:
+            r = requests.get("http://product-service:8000/books/", timeout=3)
+            for b in (r.json() if r.status_code == 200 else []):
+                product_dict[str(b['id'])] = b
+        except Exception:
+            pass
+        try:
+            r = requests.get("http://product-service:8000/clothes/", timeout=3)
+            for c in (r.json() if r.status_code == 200 else []):
+                product_dict[str(c['id'])] = c
+        except Exception:
+            pass
 
-    # 3. Phép thuật Mix & Match
+    # 3. Build display items
     display_items = []
     total_price = 0
 
     for item in my_cart_items:
         b_id = str(item.get('book_id', item.get('book', '')))
         item_type = item.get('item_type', 'book')
-        b_info = None
-
-        if item_type == 'cloth':
-            b_info = clothes_dict.get(b_id)
-        else:
-            b_info = book_dict.get(b_id)
+        b_info = product_dict.get(b_id)
 
         if b_info:
             qty = int(item.get('quantity', 1))
@@ -428,11 +444,6 @@ def manager_dashboard(request):
 # ==========================================
 # KHU VỰC 3: API PROXY (Lách luật CORS)
 # ==========================================
-from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-import requests
-
 # ==========================================
 # CỖ MÁY PROXY VẠN NĂNG (DỨT ĐIỂM CORS 1 LẦN VÀ MÃI MÃI)
 # ==========================================
@@ -518,16 +529,18 @@ def checkout_view(request):
         if cart_res.status_code == 200: my_cart_items = cart_res.json()
     except: pass
 
+    product_dict = {}
     try:
-        book_res = requests.get("http://product-service:8000/books/")
-        books = book_res.json() if book_res.status_code == 200 else []
-        book_dict = {str(b['id']): b for b in books}
-    except: book_dict = {}
+        all_res = requests.get("http://product-service:8000/products/", timeout=3)
+        all_products = all_res.json() if all_res.status_code == 200 else []
+        product_dict = {str(p['id']): p for p in all_products}
+    except Exception:
+        pass
 
     display_items = []
     total_price = 0
     for item in my_cart_items:
-        b_info = book_dict.get(str(item.get('book_id')))
+        b_info = product_dict.get(str(item.get('book_id')))
         if b_info:
             subtotal = int(item.get('quantity', 1)) * float(b_info.get('price', 0))
             total_price += subtotal
@@ -647,7 +660,14 @@ def staff_dashboard(request):
 
 @csrf_exempt
 def track_behavior(request):
-    """POST {action, product?} — cập nhật session behavior từ frontend."""
+    """
+    POST {action, product?} — cập nhật session behavior + ghi vào graph Neo4j.
+
+    Luồng:
+      1. Cập nhật session behavior counter (phục vụ LSTM)
+      2. Forward sang ai-behavior-service /interact (ghi User→Product edge trong Neo4j)
+      Bước 2 là fire-and-forget: timeout ngắn, lỗi không ảnh hưởng response.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST only'}, status=405)
     try:
@@ -656,17 +676,71 @@ def track_behavior(request):
         product = data.get('product')
         _update_behavior(request, action, product)
         label = _get_behavior_label(request)
+
+        # ── Forward sang graph /interact (fire-and-forget) ─────────
+        if product:
+            uid = _get_user_id(request)
+            pid = str(product.get('id', ''))   # composite "book_5" or "electronics_85"
+            # Extract type from composite id if not explicitly sent (add_to_cart case)
+            ptype = str(product.get('product_type') or product.get('type', ''))
+            if not ptype and '_' in pid:
+                ptype = pid.split('_')[0]
+            ptype = ptype or 'unknown'
+            pname = str(product.get('name') or product.get('title', ''))
+            if pid:
+                try:
+                    requests.post(
+                        f"{AI_BEHAVIOR_URL}/interact",
+                        json={
+                            "user_id": uid,
+                            "product_id": pid,
+                            "action": action,
+                            "product_type": ptype,
+                            "product_name": pname,
+                        },
+                        headers={"X-API-Key": AI_BEHAVIOR_KEY},
+                        timeout=1,
+                    )
+                except Exception:
+                    pass  # Neo4j offline → không ảnh hưởng UX
+
         return JsonResponse({'ok': True, 'label': label})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 
 
 def recommendations_view(request):
-    """GET — trả về 4 sản phẩm cá nhân hóa theo behavior + viewed types."""
+    """
+    GET — trả về 4 sản phẩm cá nhân hóa.
+
+    Luồng 3 tầng:
+      Tầng 1 (Graph): gọi /recommend → product_id list có score từ Neo4j
+      Tầng 2 (Content): ưu tiên loại sản phẩm user đã xem (_viewed_types)
+      Tầng 3 (Behavior): sort theo behavior label (LSTM)
+
+    Nếu graph có kết quả → sản phẩm graph được đưa lên đầu (đã có score thực).
+    Nếu graph rỗng (user mới / Neo4j offline) → fallback hoàn toàn tầng 2+3.
+    """
     label = _get_behavior_label(request)
     b = request.session.get('behavior', {})
     viewed_types = b.get('_viewed_types', [])   # most recent last
+    uid = _get_user_id(request)
 
+    # ── Tầng 1: Graph recommendations ──────────────────────────
+    graph_pids: list[str] = []   # product_id strings, ordered by graph score
+    try:
+        gr = requests.get(
+            f"{AI_BEHAVIOR_URL}/recommend",
+            params={"user_id": uid, "behavior_label": label or "window_shopper", "top_k": 20},
+            headers={"X-API-Key": AI_BEHAVIOR_KEY},
+            timeout=1,
+        )
+        if gr.status_code == 200:
+            graph_pids = [str(r["product_id"]) for r in gr.json().get("recommendations", [])]
+    except Exception:
+        pass  # Neo4j offline → graph_pids stays empty
+
+    # ── Fetch toàn bộ sản phẩm từ product-service ──────────────
     try:
         res = requests.get("http://product-service:8000/products/", timeout=3)
         all_products = res.json() if res.status_code == 200 else []
@@ -680,17 +754,33 @@ def recommendations_view(request):
         p['product_id'] = f"{ptype}_{p['id']}"
         p['title'] = p.get('name', '')
 
-    if viewed_types:
-        # Boost: ưu tiên loại sản phẩm user đã xem gần nhất
-        recent = set(viewed_types[-3:])
-        primary   = _sort_by_behavior([p for p in all_products if p.get('type') in recent], label)
-        secondary = _sort_by_behavior([p for p in all_products if p.get('type') not in recent], label)
-        sorted_products = primary + secondary
+    # ── Tầng 1 merge: đẩy graph products lên đầu ───────────────
+    if graph_pids:
+        pid_set = set(graph_pids)
+        # graph lưu composite product_id ("book_5"), khớp với p['product_id']
+        graph_products  = [p for p in all_products if p.get('product_id') in pid_set]
+        other_products  = [p for p in all_products if p.get('product_id') not in pid_set]
+        # Giữ thứ tự graph_score (graph_pids đã sort theo score)
+        pid_order = {pid: i for i, pid in enumerate(graph_pids)}
+        graph_products.sort(key=lambda p: pid_order.get(p.get('product_id', ''), 999))
     else:
-        sorted_products = _sort_by_behavior(all_products, label)
+        graph_products = []
+        other_products = all_products
+
+    # ── Tầng 2+3: content-based + behavior sort cho phần còn lại
+    if viewed_types:
+        recent = set(viewed_types[-3:])
+        primary   = _sort_by_behavior([p for p in other_products if p.get('type') in recent], label)
+        secondary = _sort_by_behavior([p for p in other_products if p.get('type') not in recent], label)
+        fallback = primary + secondary
+    else:
+        fallback = _sort_by_behavior(other_products, label)
+
+    sorted_products = graph_products + fallback
 
     return JsonResponse({
         'products': sorted_products[:4],
         'label': label,
         'reason': _BEHAVIOR_REASONS.get(label, 'Gợi ý hôm nay dành riêng cho bạn!'),
+        'source': 'graph+content' if graph_products else 'content',
     })

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+data:
+  init-databases.sh: |
+    #!/bin/bash
+    set -e
+    createdb -U $POSTGRES_USER user_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER staff_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER manager_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER customer_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER catalog_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER book_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER cart_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER order_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER ship_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER pay_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER comment_rate_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER recommender_ai_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER gateway_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER auth_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER clothes_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER ai_behavior_db 2>/dev/null || true
+    createdb -U $POSTGRES_USER product_db 2>/dev/null || true

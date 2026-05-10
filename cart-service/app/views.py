@@ -34,20 +34,26 @@ class AddCartItem(APIView):
         # 1. Tự động tìm Giỏ hàng của khách này (hoặc tạo mới nếu chưa có)      
         cart, created = Cart.objects.get_or_create(customer_id=customer_id)     
 
-        # 2. Gọi Service tương ứng để check sản phẩm thật hay giả
+        # 2. Validate sản phẩm tồn tại trong product-service
         try:
             if item_type == "cloth":
-                r = requests.get(f"{CLOTHES_SERVICE_URL}/clothes/")
-                items = r.json()
+                r = requests.get(f"{CLOTHES_SERVICE_URL}/clothes/", timeout=3)
+                items = r.json() if r.status_code == 200 else []
                 if not any(str(b["id"]) == str(book_id) for b in items):
                     return Response({"error": "Quần áo không tồn tại trong kho!"}, status=400)
-            else:
-                r = requests.get(f"{BOOK_SERVICE_URL}/books/")
-                items = r.json()
+            elif item_type == "book":
+                r = requests.get(f"{BOOK_SERVICE_URL}/books/", timeout=3)
+                items = r.json() if r.status_code == 200 else []
                 if not any(str(b["id"]) == str(book_id) for b in items):
                     return Response({"error": "Sách không tồn tại trong kho!"}, status=400)
+            else:
+                # electronics, furniture, sport, beauty, toy, music, other...
+                r = requests.get(f"{BOOK_SERVICE_URL}/products/", timeout=3)
+                items = r.json() if r.status_code == 200 else []
+                if items and not any(str(b["id"]) == str(book_id) for b in items):
+                    return Response({"error": "Sản phẩm không tồn tại trong kho!"}, status=400)
         except Exception:
-            return Response({"error": f"Không kết nối được với {item_type} Service"}, status=500)
+            pass  # Không kết nối được → vẫn cho thêm vào giỏ, tránh chặn UX
 
         # 3. LOGIC GỘP SÁCH SIÊU CHỐNG LỖI
         existing_item = CartItem.objects.filter(cart=cart, book_id=book_id, item_type=item_type).first()

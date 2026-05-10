@@ -18,6 +18,11 @@ Endpoints:
 
   POST /clear-session/{user_id}     — Xóa session chat
 
+  [Graph endpoints — User interaction]
+  POST /interact                     — Ghi nhận tương tác User→Product vào Neo4j
+  GET  /recommend                    — Gợi ý cá nhân hóa: graph traversal + behavior boost
+  GET  /user/{user_id}/history       — Lịch sử tương tác của user trong graph
+
 Chạy standalone:
   cd ai-behavior-service
   uvicorn module4_api.main:app --host 0.0.0.0 --port 8020 --reload
@@ -89,6 +94,14 @@ class GNNTrainRequest(BaseModel):
     force_rebuild_dataset: bool = False
 
 
+class InteractRequest(BaseModel):
+    user_id: str
+    product_id: str
+    action: str          # view | click | add_to_cart | purchase | ...
+    product_type: str = "unknown"
+    product_name: str = ""
+
+
 # =============================================
 # GLOBAL COMPONENTS (lazy load, thread-safe)
 # =============================================
@@ -143,6 +156,18 @@ def get_chatbot():
     return _components.get("chatbot")
 
 
+def get_user_interaction_graph():
+    """Lazy load UserInteractionGraph (singleton)."""
+    if "user_graph" not in _components:
+        try:
+            from module0_graph.user_interaction import get_user_interaction_graph as _get
+            _components["user_graph"] = _get()
+        except Exception as e:
+            print(f"⚠️ UserInteractionGraph load error: {e}")
+            _components["user_graph"] = None
+    return _components.get("user_graph")
+
+
 def get_cold_start_router():
     """Lazy load ColdStartRouter (Phase 3 — GNN + LSTM routing)."""
     if "cold_start_router" not in _components:
@@ -178,6 +203,8 @@ async def lifespan(app: FastAPI):
     # Warm-up LSTM model
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, get_behavior_model)
+    # Warm-up user interaction graph (connects to Neo4j)
+    await loop.run_in_executor(None, get_user_interaction_graph)
     print("🚀 Service ready!")
     yield
     print("👋 AI Behavior Service shutting down...")
@@ -238,6 +265,10 @@ async def health_check():
             "chatbot": _components.get("chatbot") is not None,
             "gnn_model": gnn_ready,
             "cold_start_router": _components.get("cold_start_router") is not None,
+            "user_interaction_graph": (
+                _components.get("user_graph") is not None
+                and getattr(_components.get("user_graph"), "_connected", False)
+            ),
         },
     }
 
@@ -585,6 +616,94 @@ async def get_user_embedding(
         "behavior_label": result.get("behavior_label", "unknown"),
         "confidence": result.get("confidence", 0.0),
     }
+
+
+# =============================================
+# ENDPOINTS — USER INTERACTION GRAPH
+# =============================================
+
+@app.post("/interact", tags=["Graph"])
+async def log_interaction(req: InteractRequest, api_key: str = Depends(verify_api_key)):
+    """
+    Ghi nhận tương tác User→Product vào Neo4j knowledge graph.
+
+    - `action`: `view` | `click` | `add_to_cart` | `purchase` | `search` | `price_check` | `review_read`
+    - Edge weight tự động: view=1, add_to_cart=3, purchase=5
+    - Edge được MERGE (không tạo trùng) — count tăng mỗi lần gọi
+
+    Graceful: nếu Neo4j offline → trả 200 với `stored: false` thay vì lỗi.
+    """
+    graph = get_user_interaction_graph()
+    if graph is None:
+        return {"status": "ok", "stored": False, "reason": "graph service unavailable"}
+
+    stored = graph.log_action(
+        user_id=req.user_id,
+        product_id=req.product_id,
+        action=req.action,
+        product_type=req.product_type,
+        product_name=req.product_name,
+    )
+    return {
+        "status": "ok",
+        "stored": stored,
+        "user_id": req.user_id,
+        "product_id": req.product_id,
+        "action": req.action,
+    }
+
+
+@app.get("/recommend", tags=["Graph"])
+async def graph_recommend(
+    user_id: str = Query(..., description="ID của user cần gợi ý"),
+    top_k: int = Query(default=10, ge=1, le=50, description="Số sản phẩm gợi ý"),
+    behavior_label: str = Query(default="window_shopper", description="Nhãn hành vi từ LSTM"),
+    exclude_purchased: bool = Query(default=True, description="Loại trừ sản phẩm đã mua"),
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    Gợi ý sản phẩm cá nhân hóa bằng graph traversal + behavior boost.
+
+    **Thuật toán (2 bước)**:
+    1. **Direct history**: tính graph_score = sum(weight × count) cho mỗi product user đã tương tác
+    2. **Collaborative filtering**: User→Product→User2→Product2 (1 hop) — tìm product mới từ user tương tự
+    3. **Hybrid**: final_score = (graph_score + 0.5×collab_score) × behavior_boost
+
+    `behavior_label` ảnh hưởng boost (impulse_buyer=1.4x, window_shopper=0.9x, ...).
+
+    Nếu Neo4j offline hoặc user chưa có lịch sử → trả `[]` (caller tự fallback content-based).
+    """
+    graph = get_user_interaction_graph()
+    if graph is None:
+        return {
+            "user_id": user_id,
+            "recommendations": [],
+            "count": 0,
+            "source": "unavailable",
+        }
+
+    recs = graph.get_recommendations(
+        user_id=user_id,
+        behavior_label=behavior_label,
+        top_k=top_k,
+        exclude_purchased=exclude_purchased,
+    )
+    return {
+        "user_id": user_id,
+        "behavior_label": behavior_label,
+        "recommendations": recs,
+        "count": len(recs),
+        "source": "graph" if recs else "no_history",
+    }
+
+
+@app.get("/user/{user_id}/history", tags=["Graph"])
+async def get_interaction_history(user_id: str, api_key: str = Depends(verify_api_key)):
+    """Xem lịch sử tương tác User→Product trong graph (debug/admin)."""
+    graph = get_user_interaction_graph()
+    if graph is None:
+        raise HTTPException(503, "Graph service không khả dụng.")
+    return graph.get_user_history(user_id)
 
 
 # =============================================

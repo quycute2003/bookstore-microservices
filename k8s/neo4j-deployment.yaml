@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4j
+  labels:
+    app: neo4j
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: neo4j
+        image: neo4j:5-community
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7687
+        env:
+        - name: NEO4J_AUTH
+          value: "neo4j/lumiere123"
+        - name: NEO4J_server_memory_heap_initial__size
+          value: "256m"
+        - name: NEO4J_server_memory_heap_max__size
+          value: "512m"
+        readinessProbe:
+          tcpSocket:
+            port: 7687
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "50m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: neo4j-pvc

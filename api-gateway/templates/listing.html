@@ -438,7 +438,13 @@
             const res = await fetch('/api/cart/cart-items/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ book_id: btn.dataset.id.replace("book_","").replace("cloth_",""), quantity: 1 })
+              body: JSON.stringify((function(){
+                const pid = btn.dataset.id || '';          // "book_5", "electronics_85"
+                const sep = pid.indexOf('_');
+                const itemType = sep > -1 ? pid.slice(0, sep) : 'book';
+                const bookId   = sep > -1 ? pid.slice(sep + 1) : pid;
+                return { book_id: bookId, item_type: itemType, quantity: 1 };
+              })())
             });
 
             if(res.ok) {

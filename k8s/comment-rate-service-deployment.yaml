@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comment-rate-service
+  labels:
+    app: comment-rate-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comment-rate-service
+  template:
+    metadata:
+      labels:
+        app: comment-rate-service
+    spec:
+      initContainers:
+      - name: wait-for-postgres-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z postgres-db 5432; do echo waiting for postgres-db; sleep 2; done']
+      containers:
+      - name: comment-rate-service
+        image: dunguyenquy/comment-rate-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 6
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "30m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
